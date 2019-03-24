@@ -1,5 +1,7 @@
 package pacman.entries.pacman;
 
+import dataRecording.DataTuple;
+import decisionTree.DecisionTree;
 import pacman.controllers.Controller;
 import pacman.game.Constants.MOVE;
 import pacman.game.Game;
@@ -11,12 +13,21 @@ import pacman.game.Game;
  */
 public class MyPacMan extends Controller<MOVE>
 {
-	private MOVE myMove=MOVE.NEUTRAL;
+	// private MOVE myMove=MOVE.NEUTRAL;
+	
+	public MyPacMan() {
+		super();
+		DecisionTree dt = new DecisionTree();
+		dt.buildTree();
+	}
 	
 	public MOVE getMove(Game game, long timeDue) 
 	{
 		//Place your game logic here to play the game as Ms Pac-Man
 		
-		return myMove;
+		// Send attributes of Current state to DT
+		// dt.getMove();
+		
+		return MOVE.NEUTRAL;
 	}
 }
