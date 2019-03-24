@@ -18,14 +18,19 @@ public class MyPacMan extends Controller<MOVE>
 	public MyPacMan() {
 		super();
 		DecisionTree dt = new DecisionTree();
-		dt.buildTree();
+		dt.printTree();
 	}
 	
 	public MOVE getMove(Game game, long timeDue) 
 	{
 		//Place your game logic here to play the game as Ms Pac-Man
 		
+		//Current state
+		DataTuple data = new DataTuple(game, MOVE.NEUTRAL);
+		
+		
 		// Send attributes of Current state to DT
+		
 		// dt.getMove();
 		
 		return MOVE.NEUTRAL;
