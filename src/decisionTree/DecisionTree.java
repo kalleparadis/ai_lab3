@@ -180,39 +180,69 @@ public class DecisionTree {
 		return N;
 	}
 	
-	// A helper method that subdivide (partition) datasets based on attributes value. Test this good!
-	private LinkedList<String[]> partitionData(LinkedList<String[]> data, String A, String Aj) {
-		// Create new dataSet
+	
+	/**
+	 * Function for calculating max benefit (attribute selection method) by Information Gain.
+	 * @return The max benefit AttributeName
+	 */
+	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList) {
+		String mostGainAttribute = "";
+		double highestGain = Double.MIN_VALUE;
+		for (String attribute : attributeList.keySet()) {
+			double gain = calculateGain(data, attributeList, attribute); 
+			if (gain > highestGain) {
+				mostGainAttribute = attribute;
+				highestGain = gain;
+			}
+		}
+		return mostGainAttribute;
+	}
+	
+	/*
+	 * Gain(A) = Info(D) - InfoA(D)
+	 * Info(D) = -Emi=1pilog2(pi)					-> The expected information of the dataset (the average information)
+	 * InfoA(D) = Evj=1 (|Dj|/|D|) * Info(Dj)		-> The expected information of the attribute when you divide D in relation to A.
+	 */
+	private double calculateGain(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList, String attribute) {
+		
+		// OMG MATH
+		
+		return 0.99;
+	}
+	
+	private static double log2(double x) {
+		return x == 0 ? 0 : Math.log10(x) / Math.log(2.0);
+	}
+	
+	/**
+	 * A helper method that subdivide (partition) datasets based on attributeValue. Test this good!
+	 */
+	private LinkedList<String[]> partitionData(LinkedList<String[]> data, String attributeName, String attributeValue) {
 		LinkedList<String[]> partitionedData = new LinkedList<>();
 
-		// for every dataRow in dataSet, if the attributeValue for A equals Aj, copy the row to new dataSet
+		// For every dataRow in dataSet, if the attributeValue for A equals Aj, copy the row to new dataSet
 		for (String[] dataRow : data) {
-			// need position of attribute A in dataRow... Can't use remainingAttrList because it's changing. Need Immutable dataStructure
-			int attrPos = getAttributePosInRow(A);
-			if (dataRow[attrPos].equals(Aj)) {
+			int attrPos = getAttributePosInRow(attributeName);
+			if (dataRow[attrPos].equals(attributeValue)) {
 				partitionedData.add(dataRow);
 			}
 		}
 		return partitionedData;
 	}
 	
-	private int getAttributePosInRow(String A) {
+	/**
+	 * Go from name of an attribute to it's position in a data row.
+	 */
+	private int getAttributePosInRow(String attributeName) {
 		int attributePos = -1;
 		for (int i = 0; i < this.ATTRIBUTE_ORDER.length; i++) {
-			if (ATTRIBUTE_ORDER[i].equals(A)) {
+			if (ATTRIBUTE_ORDER[i].equals(attributeName)) {
 				attributePos = i;
 				break;
 			}
 		}
-		if (attributePos == -1) throw new RuntimeException("getAttributePosInRow() Attribute doesn't exist: " + A);
+		if (attributePos == -1) throw new RuntimeException("getAttributePosInRow() Attribute doesn't exist: " + attributeName);
 		return attributePos;
-	}
-	
-	/*
-	 * function for calculating max benefit (attribute selection method)
-	 */
-	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList) {
-		return null;
 	}
 
 	// Print visual representation of the tree in console
