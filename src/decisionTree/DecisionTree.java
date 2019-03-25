@@ -1,13 +1,10 @@
 package decisionTree;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import dataRecording.DataTuple;
-import dataRecording.DataTuple.DiscreteTag;
 import pacman.game.Constants.MOVE;
 
 public class DecisionTree {
@@ -27,22 +24,26 @@ public class DecisionTree {
 			}
 		}
 		
-		TreeSet<String> attributeList = new TreeSet<>();
-		attributeList.add("DirectionChosen");
-		attributeList.add("pacmanPosition");
-		attributeList.add("blinkyDist");
-		attributeList.add("inkyDist");
-		attributeList.add("pinkyDist");
-		attributeList.add("sueDist");
-		attributeList.add("isBlinkyEdible");
-		attributeList.add("isInkyEdible");
-		attributeList.add("isPinkyEdible");
-		attributeList.add("isSueEdible");
-		attributeList.add("blinkyDir");
-		attributeList.add("inkyDir");
-		attributeList.add("pinkyDir");
-		attributeList.add("sueDir");
-		attributeList.add("dangerLevel");
+		String[] moveValues = {"UP", "RIGHT", "DOWN", "LEFT", "NEUTRAL"};
+		String[] discreteTagValues = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
+		String[] booleanValues = {"true", "false"};
+		
+		TreeMap<String, String[]> attributeList = new TreeMap<>();
+		attributeList.put("DirectionChosen", moveValues);			// MOVE
+		attributeList.put("pacmanPosition", discreteTagValues);		// DiscreteTag
+		attributeList.put("blinkyDist", discreteTagValues);
+		attributeList.put("inkyDist", discreteTagValues);
+		attributeList.put("pinkyDist", discreteTagValues);
+		attributeList.put("sueDist", discreteTagValues);
+		attributeList.put("isBlinkyEdible", booleanValues);			// Boolean
+		attributeList.put("isInkyEdible", booleanValues);
+		attributeList.put("isPinkyEdible", booleanValues);
+		attributeList.put("isSueEdible", booleanValues);
+		attributeList.put("blinkyDir", moveValues);					// MOVE
+		attributeList.put("inkyDir", moveValues);
+		attributeList.put("pinkyDir", moveValues);
+		attributeList.put("sueDir", moveValues);
+		attributeList.put("dangerLevel", discreteTagValues);		// DiscreteTag
 		
 		// discretize -> list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
@@ -67,7 +68,7 @@ public class DecisionTree {
 			filteredRow[12] = tupleRow.pinkyDir.toString();
 			filteredRow[13] = tupleRow.sueDir.toString();
 			
-			// Define "dangerLevel" based on proximity of closest non-edible ghost.
+			// Preprocessor: Define "dangerLevel" based on proximity of closest non-edible ghost.
 			ArrayList<Integer> ghostDist = new ArrayList<>();
 			if (!tupleRow.isBlinkyEdible) ghostDist.add(tupleRow.blinkyDist);
 			if (!tupleRow.isInkyEdible) ghostDist.add(tupleRow.inkyDist);
@@ -89,7 +90,7 @@ public class DecisionTree {
 		this.root = generateTree(filteredData, attributeList);
 	}
 	
-	public Node generateTree(LinkedList<String[]> data, TreeSet<String> remainingAttributesList) {
+	public Node generateTree(LinkedList<String[]> data, TreeMap<String, String[]> remainingAttributesList) {
 //		 1. Create node N.
 		Node N = new Node();
 		
@@ -148,11 +149,11 @@ public class DecisionTree {
 			N.attributeName = A;
 			N.isLeaf = false;
 			remainingAttributesList.remove(A);
-//			3. For each value aj in attribute A:
-//				a) Separate all tuples in D so that attribute A takes the value aj, creating the subset Dj.
+//			3. For each value Aj in attribute A:
+//				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
 //				b) If Dj is empty, add a child node to N labeled with the majority class in D.
 //				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
-			for (String Aj : A.possibleValues) {
+			for (String Aj : remainingAttributesList.get(A)) {
 				LinkedList<String[]> Dj = partitionData(A);
 				if (Dj.isEmpty()) {
 					Node child = new Node();
@@ -171,7 +172,7 @@ public class DecisionTree {
 	/*
 	 * function for calculating max benefit (attribute selection method)
 	 */
-	private String S(LinkedList<String[]> data, TreeSet<String> attributeList) {
+	private String S(LinkedList<String[]> data, TreeMap<String, String[]> attributeList) {
 		return null;
 	}
 
