@@ -1,5 +1,6 @@
 package pacman.entries.pacman;
 
+import dataRecording.DataSaverLoader;
 import dataRecording.DataTuple;
 import decisionTree.DecisionTree;
 import pacman.controllers.Controller;
@@ -14,10 +15,11 @@ import pacman.game.Game;
 public class MyPacMan extends Controller<MOVE>
 {
 	// private MOVE myMove=MOVE.NEUTRAL;
+	private DecisionTree dt;
 	
 	public MyPacMan() {
 		super();
-		DecisionTree dt = new DecisionTree();
+		dt = new DecisionTree(DataSaverLoader.LoadPacManData());
 		dt.printTree();
 	}
 	
@@ -26,13 +28,9 @@ public class MyPacMan extends Controller<MOVE>
 		//Place your game logic here to play the game as Ms Pac-Man
 		
 		//Current state
-		DataTuple data = new DataTuple(game, MOVE.NEUTRAL);
+		DataTuple data = new DataTuple(game, game.getPacmanLastMoveMade());
 		
-		
-		// Send attributes of Current state to DT
-		
-		// dt.getMove();
-		
-		return MOVE.NEUTRAL;
+		// Send attributes of Current state to DT and receive move
+		return dt.predictMove(data);
 	}
 }
