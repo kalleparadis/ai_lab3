@@ -113,31 +113,35 @@ public class DecisionTree {
 			}
 		}
 		
-//		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
-		boolean allSameClass = true, trigger = false;
-		String leafMove = "";
+		// Is D is all the same class
+		boolean isAllSameClass = true, trigger = false;
+		String allSameClass = "";
 		for (String move : movesCounter.keySet()) {
 			if (movesCounter.get(move) > 0 && trigger == false) {
 				trigger = true;
-				leafMove = move;
+				allSameClass = move;
 			} else if (movesCounter.get(move) > 0 && trigger == true) {
-				allSameClass = false;
+				isAllSameClass = false;
 				break;
 			}
 		}
-		if (allSameClass == true) {
+		
+		// Get majority class in D
+		String majorityClass = "";
+		int maxValue = Integer.MIN_VALUE;
+		for (String move : movesCounter.keySet()) {
+			if (movesCounter.get(move).intValue() > maxValue) {
+				majorityClass = move;
+			}
+		}
+		
+//		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
+		if (isAllSameClass == true) {
 			N.isLeaf = true;
-			N.leafClass = MOVE.valueOf(leafMove);
+			N.leafClass = MOVE.valueOf(allSameClass);
 			return N;
 		} else if (remainingAttributesList.isEmpty()) {
 //			3. Otherwise, if the attribute list is empty, return N as a leaf node labeled with the majority class in D.
-			String majorityClass = "";
-			int maxValue = Integer.MIN_VALUE;
-			for (String move : movesCounter.keySet()) {
-				if (movesCounter.get(move).intValue() > maxValue) {
-					majorityClass = move;
-				}
-			}
 			N.isLeaf = true;
 			N.leafClass = MOVE.valueOf(majorityClass);
 			return N;
@@ -156,17 +160,24 @@ public class DecisionTree {
 			for (String Aj : remainingAttributesList.get(A)) {
 				LinkedList<String[]> Dj = partitionData(A);
 				if (Dj.isEmpty()) {
-					Node child = new Node();
-					N.branches.put(null, child);
+					Node childNode = new Node();
+					childNode.isLeaf = true;
+					childNode.leafClass = MOVE.valueOf(majorityClass);
+					N.branches.put(Aj, childNode);
 				} else {
-					Node child = generateTree(Dj, remainingAttributesList);
-					N.branches.put(null, child);
+					Node childNode = generateTree(Dj, remainingAttributesList);
+					N.branches.put(Aj, childNode);
 				}
 			}
 		}
 
 //		4. Return N.
 		return N;
+	}
+	
+	// A helper method that subdivide (partition) datasets based on attributes value. Test this good!
+	private LinkedList<String[]> partitionData(String attribute) {
+		return null;
 	}
 	
 	/*
@@ -180,13 +191,7 @@ public class DecisionTree {
 	public void printTree() {
 		System.out.println("A tree");
 	}
-	
-	
-	// A helper method that subdivide (partition) datasets based on attributes value. Test this good!
-	private LinkedList<String[]> partitionData(String attribute) {
-		return null;
-	}
-	
+
 	public MOVE predictMove(DataTuple data) {
 		// Extract attribute values
 		// Traverse tree from this.root
@@ -194,7 +199,7 @@ public class DecisionTree {
 	}
 	
 	private MOVE traverse(Node currentNode, String[] attributeValues) {
-		if (currentNode.isLeaf == true){
+		if (currentNode.isLeaf == true) {
 			return currentNode.leafClass;
 		} else {
 //			String value = attributeValues[currentNode.attribute];
@@ -213,14 +218,13 @@ public class DecisionTree {
 		
 		// Only relevant if isLeaf == false
 		public String attributeName;								// pacmanPosition, isBlinkyEdible, inkyDist
-		public String[] possibleAttributeValues;					// boolean, MOVE, DiscreteTag
-		private TreeMap<String,Node> branches = new TreeMap<>();	// <attrValue,childNode>
+		public TreeMap<String, Node> branches = new TreeMap<>();	// <attrValue, childNode>
 		
 		public Node getChild(String attrValue) {
-			if (!this.isLeaf) {
-				throw new RuntimeException("getChild(): Node is leaf!");
-			}
-			return branches.get(attrValue);
+			if (!this.isLeaf) throw new RuntimeException("getChild(): Node is a leaf!");
+			Node childNode = branches.get(attrValue);
+			if (childNode == null) throw new RuntimeException("getChild(): there is no branch for attrValue: " + attrValue);
+			return childNode;
 		}
 	}
 
