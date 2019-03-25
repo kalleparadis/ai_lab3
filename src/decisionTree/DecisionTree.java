@@ -1,6 +1,7 @@
 package decisionTree;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.TreeMap;
 
@@ -9,6 +10,7 @@ import pacman.game.Constants.MOVE;
 
 public class DecisionTree {
 	private Node root;
+	private final String[] ATTRIBUTE_ORDER;
 	
 	public DecisionTree(DataTuple[] allData) {
 		// Partition dataset in:
@@ -28,8 +30,8 @@ public class DecisionTree {
 		String[] discreteTagValues = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
 		String[] booleanValues = {"true", "false"};
 		
-		TreeMap<String, String[]> attributeList = new TreeMap<>();
-		attributeList.put("DirectionChosen", moveValues);			// MOVE
+		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<>();
+		attributeList.put("directionChosen", moveValues);			// MOVE
 		attributeList.put("pacmanPosition", discreteTagValues);		// DiscreteTag
 		attributeList.put("blinkyDist", discreteTagValues);
 		attributeList.put("inkyDist", discreteTagValues);
@@ -44,6 +46,9 @@ public class DecisionTree {
 		attributeList.put("pinkyDir", moveValues);
 		attributeList.put("sueDir", moveValues);
 		attributeList.put("dangerLevel", discreteTagValues);		// DiscreteTag
+		
+		// Save the attribute order for later
+		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
 		
 		// discretize -> list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
@@ -90,7 +95,7 @@ public class DecisionTree {
 		this.root = generateTree(filteredData, attributeList);
 	}
 	
-	public Node generateTree(LinkedList<String[]> data, TreeMap<String, String[]> remainingAttributesList) {
+	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
 //		 1. Create node N.
 		Node N = new Node();
 		
@@ -148,21 +153,21 @@ public class DecisionTree {
 		} else {
 //			4. Otherwise:
 //			1. Call the attribute selection method on D and the attribute list, in order to choose the current attribute A: S(D, attribute list) -> A.
-			String A = S(data, remainingAttributesList);
+			String attributeNameA = S(data, remainingAttributesList);
 //			2. Label N as A and remove A from the attribute list.
-			N.attributeName = A;
+			N.attributeName = attributeNameA;
 			N.isLeaf = false;
-			remainingAttributesList.remove(A);
+			remainingAttributesList.remove(attributeNameA);
 //			3. For each value Aj in attribute A:
 //				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
 //				b) If Dj is empty, add a child node to N labeled with the majority class in D.
 //				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
-			for (String Aj : remainingAttributesList.get(A)) {
-				LinkedList<String[]> Dj = partitionData(A);
+			for (String Aj : remainingAttributesList.get(attributeNameA)) {
+				LinkedList<String[]> Dj = partitionData(data, attributeNameA, Aj);
 				if (Dj.isEmpty()) {
 					Node childNode = new Node();
 					childNode.isLeaf = true;
-					childNode.leafClass = MOVE.valueOf(majorityClass);
+					childNode.leafClass = MOVE.valueOf(majorityClass); // Is it majorityClass of D or Dj?
 					N.branches.put(Aj, childNode);
 				} else {
 					Node childNode = generateTree(Dj, remainingAttributesList);
@@ -176,14 +181,37 @@ public class DecisionTree {
 	}
 	
 	// A helper method that subdivide (partition) datasets based on attributes value. Test this good!
-	private LinkedList<String[]> partitionData(String attribute) {
-		return null;
+	private LinkedList<String[]> partitionData(LinkedList<String[]> data, String A, String Aj) {
+		// Create new dataSet
+		LinkedList<String[]> partitionedData = new LinkedList<>();
+
+		// for every dataRow in dataSet, if the attributeValue for A equals Aj, copy the row to new dataSet
+		for (String[] dataRow : data) {
+			// need position of attribute A in dataRow... Can't use remainingAttrList because it's changing. Need Immutable dataStructure
+			int attrPos = getAttributePosInRow(A);
+			if (dataRow[attrPos].equals(Aj)) {
+				partitionedData.add(dataRow);
+			}
+		}
+		return partitionedData;
+	}
+	
+	private int getAttributePosInRow(String A) {
+		int attributePos = -1;
+		for (int i = 0; i < this.ATTRIBUTE_ORDER.length; i++) {
+			if (ATTRIBUTE_ORDER[i].equals(A)) {
+				attributePos = i;
+				break;
+			}
+		}
+		if (attributePos == -1) throw new RuntimeException("getAttributePosInRow() Attribute doesn't exist: " + A);
+		return attributePos;
 	}
 	
 	/*
 	 * function for calculating max benefit (attribute selection method)
 	 */
-	private String S(LinkedList<String[]> data, TreeMap<String, String[]> attributeList) {
+	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList) {
 		return null;
 	}
 
