@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import dataRecording.DataTuple;
@@ -69,6 +68,22 @@ public class DecisionTree {
 		
 		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
+		
+		// Calculate accuracy
+		System.out.println("Accuracy(training dataset): " + getAccuracy(trainingData));
+		System.out.println("Final accuracy(test dataset): " + getAccuracy(testData));
+	}
+	
+	private double getAccuracy(LinkedList<DataTuple> data) {
+		int totalNbrOfTuples = data.size();
+		int nbrTuplesClassifiedCorrectly = 0;
+		for (DataTuple row : data) {
+			MOVE predictedMove = predictMove(row);
+			if (predictedMove == row.DirectionChosen) {
+				nbrTuplesClassifiedCorrectly++;
+			}
+		}
+		return nbrTuplesClassifiedCorrectly / (double)totalNbrOfTuples;
 	}
 	
 	/*

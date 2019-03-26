@@ -29,6 +29,9 @@ public class MyPacMan extends Controller<MOVE>
 		DataTuple data = new DataTuple(game, game.getPacmanLastMoveMade());
 		
 		// Send attributes of current game state to decision tree and receive MOVE
-		return dt.predictMove(data);
+		MOVE move = dt.predictMove(data);
+//		System.out.println(move);
+		
+		return move;
 	}
 }
