@@ -3,6 +3,7 @@ package decisionTree;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import dataRecording.DataTuple;
@@ -11,6 +12,7 @@ import pacman.game.Constants.MOVE;
 public class DecisionTree {
 	private Node root;
 	private final String[] ATTRIBUTE_ORDER;
+	private final LinkedHashMap<String, String[]> fullAttributeList;
 	private final double globalEntropy;
 	
 	// Define the selected attributes and their possible values (attributeList)
@@ -49,8 +51,9 @@ public class DecisionTree {
 		attributeList.put("sueDir", MOVE_VALUES);
 		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
 		
-		// Save the attribute order for later
-		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
+		// Save the full attribute order for later
+		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);			// This is probably not needed anymore, use fullAttributeList instead.
+		this.fullAttributeList = new LinkedHashMap<String, String[]>(attributeList);
 		
 		// Gather, filter, discretize data -> list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
@@ -94,52 +97,52 @@ public class DecisionTree {
 			filteredData.add(filteredRow);
 		}
 		
-		// Calculate global entropty
-		this.globalEntropy = getGlobalEntropy(filteredData);
+		// Calculate global entropty for targetClass "directionChosen"
+		this.globalEntropy = getEntropy(filteredData, "directionChosen");
 		
 		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
 	}
 	
-	private double getGlobalEntropy(LinkedList<String[]> data) {
+	private double getEntropy(LinkedList<String[]> data, String attribute) {
 		double entropy = 0d;
-		TreeMap<String, Integer> classCounter = getTargetAttrValuesFrequencies(data);
-		double nbrOfTuples = (double)data.size(); // Total number of data rows
-		for (String classValue : MOVE_VALUES) {
-			double frequency = classCounter.get(classValue) / nbrOfTuples;
+		TreeMap<String, Integer> attributeValueFrequencies = getAttributeValueFrequencies(data, attribute);
+		double nbrOfTuples = (double)data.size(); 							// Total number of data rows
+		String[] attributeValues = this.fullAttributeList.get(attribute);	// Get possible attributeValues for attribute
+		for (String attributeValue : attributeValues) {
+			double frequency = (double)attributeValueFrequencies.get(attributeValue) / (double)nbrOfTuples;
 			entropy -= frequency * Math.log(frequency) / Math.log(2);
 		}
 		return entropy;
 	}
 	
-	private TreeMap<String, Integer> getTargetAttrValuesFrequencies(LinkedList<String[]> data) {
-		//Count classes for all tuples <MOVE,counter>
-		TreeMap<String, Integer> classCounter = new TreeMap<String, Integer>() {{
-	        put("UP", 0);
-	        put("RIGHT", 0);
-	        put("DOWN", 0);
-	        put("LEFT", 0);
-	        put("NEUTRAL", 0);
-	    }};
+	private TreeMap<String, Integer> getAttributeValueFrequencies(LinkedList<String[]> data, String attribute) {
+		TreeMap<String, Integer> attrValueFrequencies = new TreeMap<String, Integer>();
+		String[] attributeValues = this.fullAttributeList.get(attribute);
+		
+	    // Initialize map with all possible values of attribute and set counters to 0.
+	    for (String attrValue : attributeValues) {
+	    	attrValueFrequencies.put(attrValue, 0);
+	    }
+	    
+	    int attributePosition = getAttributePosInRow(attribute);
 		for (String[] dataRow : data) {
-			switch (MOVE.valueOf(dataRow[0])) {	// (dataRow[0] DirectionChosen is the targetclass)
-			case UP: 		classCounter.put("UP", classCounter.get("UP") + 1);				break;
-			case RIGHT:		classCounter.put("RIGHT", classCounter.get("RIGHT") + 1);		break;
-			case DOWN:		classCounter.put("DOWN", classCounter.get("DOWN") + 1);			break;
-			case LEFT:		classCounter.put("LEFT", classCounter.get("LEFT") + 1);			break;
-			case NEUTRAL:	classCounter.put("NEUTRAL", classCounter.get("NEUTRAL") + 1);	break;
-			default: 		System.out.println("Error counting tuples"); 					break;
+			for (int j = 0; j < attributeValues.length; j++) {
+				String attrValue = dataRow[attributePosition];
+				if (attrValue.equals(attributeValues[j])) {
+					attrValueFrequencies.put(attrValue, attrValueFrequencies.get(attrValue) + 1);
+				}
 			}
 		}
-		return classCounter;
+		return attrValueFrequencies;
 	}
 	
 	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
 //		 1. Create node N.
 		Node N = new Node();
 		
-		//Count classes for all tuples <MOVE,counter>
-		TreeMap<String, Integer> classCounter = getTargetAttrValuesFrequencies(data);
+		// Count frequency of targetAttribute (classes) for all tuples. Will return <MOVE, counter>. targetClass == "directionChosen"
+		TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, "directionChosen");
 		
 		// Is D is all the same class
 		boolean isAllSameClass = true, trigger = false;
@@ -227,10 +230,19 @@ public class DecisionTree {
 	 * InfoA(D) = Evj=1 (|Dj|/|D|) * Info(Dj)		-> The expected information of the attribute when you divide D in relation to A.
 	 */
 	private double calculateGain(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList, String attribute) {
+		// count the frequency of each value for the attribute
+		TreeMap<String, Integer> attrValuesFrequencies = getAttributeValueFrequencies(data, attribute);
 		
-		// OMG MATH
+		// calculate the gain
+		double sum = 0;
+		double nbrOfTuples = (double)data.size(); // Total number of data rows: |D| the number of tuples in D.
+		for (Entry<String, Integer> entry : attrValuesFrequencies.entrySet()) {
+			// TODO: Compare with github example
+			// calculateEntropyIfValue() == getEntropy()
+			sum += entry.getValue() / nbrOfTuples * getEntropy(data, attribute);
+		}
 		
-		return 0.99;
+		return globalEntropy - sum;
 	}
 	
 
@@ -255,6 +267,7 @@ public class DecisionTree {
 	 * Go from name of an attribute to it's position in a data row.
 	 */
 	private int getAttributePosInRow(String attributeName) {
+		// TODO: This could probably use the fullAttributeList instead.
 		int attributePos = -1;
 		for (int i = 0; i < this.ATTRIBUTE_ORDER.length; i++) {
 			if (ATTRIBUTE_ORDER[i].equals(attributeName)) {
@@ -268,16 +281,19 @@ public class DecisionTree {
 
 	// Print visual representation of the tree in console
 	public void printTree() {
+		// TODO: Implement this
 		System.out.println("A tree");
 	}
 
 	public MOVE predictMove(DataTuple data) {
+		// TODO: Implement this
 		// Extract attribute values
 		// Traverse tree from this.root
 		return MOVE.NEUTRAL;
 	}
 	
 	private MOVE traverse(Node currentNode, String[] attributeValues) {
+		// TODO: Implement this
 		if (currentNode.isLeaf == true) {
 			return currentNode.leafClass;
 		} else {
