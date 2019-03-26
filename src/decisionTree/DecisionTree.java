@@ -11,6 +11,12 @@ import pacman.game.Constants.MOVE;
 public class DecisionTree {
 	private Node root;
 	private final String[] ATTRIBUTE_ORDER;
+	private final double globalEntropy;
+	
+	// Define the selected attributes and their possible values (attributeList)
+	private final String[] MOVE_VALUES = {"UP", "RIGHT", "DOWN", "LEFT", "NEUTRAL"};
+	private final String[] DISCRETE_TAG_VALUES = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
+	private final String[] BOOLEAN_VALUES = {"true", "false"};
 	
 	public DecisionTree(DataTuple[] allData) {
 		// Partition dataset in:
@@ -26,31 +32,27 @@ public class DecisionTree {
 			}
 		}
 		
-		String[] moveValues = {"UP", "RIGHT", "DOWN", "LEFT", "NEUTRAL"};
-		String[] discreteTagValues = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
-		String[] booleanValues = {"true", "false"};
-		
 		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<>();
-		attributeList.put("directionChosen", moveValues);			// MOVE
-		attributeList.put("pacmanPosition", discreteTagValues);		// DiscreteTag
-		attributeList.put("blinkyDist", discreteTagValues);
-		attributeList.put("inkyDist", discreteTagValues);
-		attributeList.put("pinkyDist", discreteTagValues);
-		attributeList.put("sueDist", discreteTagValues);
-		attributeList.put("isBlinkyEdible", booleanValues);			// Boolean
-		attributeList.put("isInkyEdible", booleanValues);
-		attributeList.put("isPinkyEdible", booleanValues);
-		attributeList.put("isSueEdible", booleanValues);
-		attributeList.put("blinkyDir", moveValues);					// MOVE
-		attributeList.put("inkyDir", moveValues);
-		attributeList.put("pinkyDir", moveValues);
-		attributeList.put("sueDir", moveValues);
-		attributeList.put("dangerLevel", discreteTagValues);		// DiscreteTag
+		attributeList.put("directionChosen", MOVE_VALUES);			// MOVE
+		attributeList.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
+		attributeList.put("blinkyDist", DISCRETE_TAG_VALUES);
+		attributeList.put("inkyDist", DISCRETE_TAG_VALUES);
+		attributeList.put("pinkyDist", DISCRETE_TAG_VALUES);
+		attributeList.put("sueDist", DISCRETE_TAG_VALUES);
+		attributeList.put("isBlinkyEdible", BOOLEAN_VALUES);			// Boolean
+		attributeList.put("isInkyEdible", BOOLEAN_VALUES);
+		attributeList.put("isPinkyEdible", BOOLEAN_VALUES);
+		attributeList.put("isSueEdible", BOOLEAN_VALUES);
+		attributeList.put("blinkyDir", MOVE_VALUES);					// MOVE
+		attributeList.put("inkyDir", MOVE_VALUES);
+		attributeList.put("pinkyDir", MOVE_VALUES);
+		attributeList.put("sueDir", MOVE_VALUES);
+		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
 		
 		// Save the attribute order for later
 		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
 		
-		// discretize -> list of String-arrays (filteredData)
+		// Gather, filter, discretize data -> list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
 		for (DataTuple tupleRow : trainingData) {
 			String[] filteredRow = new String[15];
@@ -92,15 +94,27 @@ public class DecisionTree {
 			filteredData.add(filteredRow);
 		}
 		
+		// Calculate global entropty
+		this.globalEntropy = getGlobalEntropy(filteredData);
+		
+		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
 	}
 	
-	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
-//		 1. Create node N.
-		Node N = new Node();
-		
+	private double getGlobalEntropy(LinkedList<String[]> data) {
+		double entropy = 0d;
+		TreeMap<String, Integer> classCounter = getTargetAttrValuesFrequencies(data);
+		double nbrOfTuples = (double)data.size(); // Total number of data rows
+		for (String classValue : MOVE_VALUES) {
+			double frequency = classCounter.get(classValue) / nbrOfTuples;
+			entropy -= frequency * Math.log(frequency) / Math.log(2);
+		}
+		return entropy;
+	}
+	
+	private TreeMap<String, Integer> getTargetAttrValuesFrequencies(LinkedList<String[]> data) {
 		//Count classes for all tuples <MOVE,counter>
-		TreeMap<String, Integer> movesCounter = new TreeMap<String, Integer>() {{
+		TreeMap<String, Integer> classCounter = new TreeMap<String, Integer>() {{
 	        put("UP", 0);
 	        put("RIGHT", 0);
 	        put("DOWN", 0);
@@ -108,24 +122,33 @@ public class DecisionTree {
 	        put("NEUTRAL", 0);
 	    }};
 		for (String[] dataRow : data) {
-			switch (MOVE.valueOf(dataRow[0])) {
-			case UP: 		movesCounter.put("UP", movesCounter.get("UP") + 1);				break;
-			case RIGHT:		movesCounter.put("RIGHT", movesCounter.get("RIGHT") + 1);		break;
-			case DOWN:		movesCounter.put("DOWN", movesCounter.get("DOWN") + 1);			break;
-			case LEFT:		movesCounter.put("LEFT", movesCounter.get("LEFT") + 1);			break;
-			case NEUTRAL:	movesCounter.put("NEUTRAL", movesCounter.get("NEUTRAL") + 1);	break;
+			switch (MOVE.valueOf(dataRow[0])) {	// (dataRow[0] DirectionChosen is the targetclass)
+			case UP: 		classCounter.put("UP", classCounter.get("UP") + 1);				break;
+			case RIGHT:		classCounter.put("RIGHT", classCounter.get("RIGHT") + 1);		break;
+			case DOWN:		classCounter.put("DOWN", classCounter.get("DOWN") + 1);			break;
+			case LEFT:		classCounter.put("LEFT", classCounter.get("LEFT") + 1);			break;
+			case NEUTRAL:	classCounter.put("NEUTRAL", classCounter.get("NEUTRAL") + 1);	break;
 			default: 		System.out.println("Error counting tuples"); 					break;
 			}
 		}
+		return classCounter;
+	}
+	
+	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
+//		 1. Create node N.
+		Node N = new Node();
+		
+		//Count classes for all tuples <MOVE,counter>
+		TreeMap<String, Integer> classCounter = getTargetAttrValuesFrequencies(data);
 		
 		// Is D is all the same class
 		boolean isAllSameClass = true, trigger = false;
 		String allSameClass = "";
-		for (String move : movesCounter.keySet()) {
-			if (movesCounter.get(move) > 0 && trigger == false) {
+		for (String move : classCounter.keySet()) {
+			if (classCounter.get(move) > 0 && trigger == false) {
 				trigger = true;
 				allSameClass = move;
-			} else if (movesCounter.get(move) > 0 && trigger == true) {
+			} else if (classCounter.get(move) > 0 && trigger == true) {
 				isAllSameClass = false;
 				break;
 			}
@@ -134,8 +157,8 @@ public class DecisionTree {
 		// Get majority class in D
 		String majorityClass = "";
 		int maxValue = Integer.MIN_VALUE;
-		for (String move : movesCounter.keySet()) {
-			if (movesCounter.get(move).intValue() > maxValue) {
+		for (String move : classCounter.keySet()) {
+			if (classCounter.get(move).intValue() > maxValue) {
 				majorityClass = move;
 			}
 		}
@@ -210,9 +233,7 @@ public class DecisionTree {
 		return 0.99;
 	}
 	
-	private static double log2(double x) {
-		return x == 0 ? 0 : Math.log10(x) / Math.log(2.0);
-	}
+
 	
 	/**
 	 * A helper method that subdivide (partition) datasets based on attributeValue. Test this good!
