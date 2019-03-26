@@ -36,7 +36,7 @@ public class DecisionTree {
 		}
 		
 		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<>();
-		attributeList.put("directionChosen", MOVE_VALUES);			// MOVE
+		attributeList.put("directionChosen", MOVE_VALUES);				// MOVE
 		attributeList.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
 		attributeList.put("blinkyDist", DISCRETE_TAG_VALUES);
 		attributeList.put("inkyDist", DISCRETE_TAG_VALUES);
@@ -50,7 +50,7 @@ public class DecisionTree {
 		attributeList.put("inkyDir", MOVE_VALUES);
 		attributeList.put("pinkyDir", MOVE_VALUES);
 		attributeList.put("sueDir", MOVE_VALUES);
-		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
+		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);			// DiscreteTag
 		
 		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
 		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
@@ -100,6 +100,7 @@ public class DecisionTree {
 		
 		// Calculate global entropty for targetClass "directionChosen"
 		this.GLOBAL_ENTROPY = getEntropy(filteredData, "directionChosen");
+		System.out.println("GLOBAL_ENTROPY: " + GLOBAL_ENTROPY);
 		
 		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
@@ -107,12 +108,15 @@ public class DecisionTree {
 	
 	private double getEntropy(LinkedList<String[]> data, String attribute) {
 		double entropy = 0d;
-		TreeMap<String, Integer> attributeValueFrequencies = getAttributeValueFrequencies(data, attribute);
+		TreeMap<String, Integer> attrValueFrequencies = getAttributeValueFrequencies(data, attribute);
 		double nbrOfTuples = (double)data.size(); 							// Total number of data rows
-		String[] attributeValues = this.FULL_ATTRIBUTE_LIST.get(attribute);	// Get possible attributeValues for attribute
+		String[] attributeValues = getPossibleValuesOfAttribute(attribute);
 		for (String attributeValue : attributeValues) {
-			double frequency = (double)attributeValueFrequencies.get(attributeValue) / (double)nbrOfTuples;
-			entropy -= frequency * Math.log(frequency) / Math.log(2);
+			int attrValueFreq = attrValueFrequencies.get(attributeValue);
+			if (attrValueFreq > 0) {
+				double frequency = (double)attrValueFreq / (double)nbrOfTuples;
+				entropy -= frequency * Math.log(frequency) / Math.log(2);
+			}
 		}
 		return entropy;
 	}
@@ -122,7 +126,7 @@ public class DecisionTree {
 	 */
 	private TreeMap<String, Integer> getAttributeValueFrequencies(LinkedList<String[]> data, String attribute) {
 		TreeMap<String, Integer> attrValueFrequencies = new TreeMap<String, Integer>();
-		String[] attributeValues = this.FULL_ATTRIBUTE_LIST.get(attribute);
+		String[] attributeValues = getPossibleValuesOfAttribute(attribute);
 		
 	    // Initialize map with all possible values of attribute and set counters to 0.
 	    for (String attrValue : attributeValues) {
@@ -192,12 +196,14 @@ public class DecisionTree {
 //				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
 //				b) If Dj is empty, add a child node to N labeled with the majority class in D.
 //				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
-			for (String Aj : remainingAttributesList.get(attributeNameA)) {
+			System.out.println("attributeNameA: " + attributeNameA);
+			String[] attributeValues = getPossibleValuesOfAttribute(attributeNameA);
+			for (String Aj : attributeValues) {
 				LinkedList<String[]> Dj = partitionData(data, attributeNameA, Aj);
 				if (Dj.isEmpty()) {
 					Node childNode = new Node();
 					childNode.isLeaf = true;
-					childNode.leafClass = MOVE.valueOf(majorityClass); // Is it majorityClass of D or Dj?
+					childNode.leafClass = MOVE.valueOf(majorityClass); // Is it majorityClass of D (whole data) or Dj (partitioned data)?
 					N.branches.put(Aj, childNode);
 				} else {
 					Node childNode = generateTree(Dj, remainingAttributesList);
@@ -210,16 +216,15 @@ public class DecisionTree {
 		return N;
 	}
 	
-	
 	/**
 	 * Function for calculating max benefit (attribute selection method) by Information Gain.
 	 * @return The max benefit AttributeName
 	 */
 	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
-		String mostGainAttribute = "";
+		String mostGainAttribute = "S() no-attribute chosen";
 		double highestGain = Double.MIN_VALUE;
 		for (String attribute : remainingAttributesList.keySet()) {
-			double gain = calculateGain(data, attribute); 
+			double gain = calculateGain(data, attribute);
 			if (gain > highestGain) {
 				mostGainAttribute = attribute;
 				highestGain = gain;
@@ -275,6 +280,10 @@ public class DecisionTree {
 		}
 		if (attributePos == -1) throw new RuntimeException("getAttributePosInRow() Attribute doesn't exist: " + attributeName);
 		return attributePos;
+	}
+	
+	private String[] getPossibleValuesOfAttribute(String attribute) {
+		return this.FULL_ATTRIBUTE_LIST.get(attribute);
 	}
 
 	// Print visual representation of the tree in console
