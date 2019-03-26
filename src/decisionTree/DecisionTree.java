@@ -10,15 +10,16 @@ import dataRecording.DataTuple;
 import pacman.game.Constants.MOVE;
 
 public class DecisionTree {
-	private Node root;
 	private final String[] ATTRIBUTE_ORDER;
-	private final LinkedHashMap<String, String[]> fullAttributeList;
-	private final double globalEntropy;
+	private final LinkedHashMap<String, String[]> FULL_ATTRIBUTE_LIST;
+	private final double GLOBAL_ENTROPY;
 	
 	// Define the selected attributes and their possible values (attributeList)
 	private final String[] MOVE_VALUES = {"UP", "RIGHT", "DOWN", "LEFT", "NEUTRAL"};
 	private final String[] DISCRETE_TAG_VALUES = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
 	private final String[] BOOLEAN_VALUES = {"true", "false"};
+	
+	private Node root;
 	
 	public DecisionTree(DataTuple[] allData) {
 		// Partition dataset in:
@@ -51,9 +52,9 @@ public class DecisionTree {
 		attributeList.put("sueDir", MOVE_VALUES);
 		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
 		
-		// Save the full attribute order for later
-		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);			// This is probably not needed anymore, use fullAttributeList instead.
-		this.fullAttributeList = new LinkedHashMap<String, String[]>(attributeList);
+		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
+		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
+		this.FULL_ATTRIBUTE_LIST = new LinkedHashMap<String, String[]>(attributeList);
 		
 		// Gather, filter, discretize data -> list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
@@ -98,7 +99,7 @@ public class DecisionTree {
 		}
 		
 		// Calculate global entropty for targetClass "directionChosen"
-		this.globalEntropy = getEntropy(filteredData, "directionChosen");
+		this.GLOBAL_ENTROPY = getEntropy(filteredData, "directionChosen");
 		
 		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
@@ -108,7 +109,7 @@ public class DecisionTree {
 		double entropy = 0d;
 		TreeMap<String, Integer> attributeValueFrequencies = getAttributeValueFrequencies(data, attribute);
 		double nbrOfTuples = (double)data.size(); 							// Total number of data rows
-		String[] attributeValues = this.fullAttributeList.get(attribute);	// Get possible attributeValues for attribute
+		String[] attributeValues = this.FULL_ATTRIBUTE_LIST.get(attribute);	// Get possible attributeValues for attribute
 		for (String attributeValue : attributeValues) {
 			double frequency = (double)attributeValueFrequencies.get(attributeValue) / (double)nbrOfTuples;
 			entropy -= frequency * Math.log(frequency) / Math.log(2);
@@ -116,9 +117,12 @@ public class DecisionTree {
 		return entropy;
 	}
 	
+	/**
+	 * Count the frequency of each value for the attribute
+	 */
 	private TreeMap<String, Integer> getAttributeValueFrequencies(LinkedList<String[]> data, String attribute) {
 		TreeMap<String, Integer> attrValueFrequencies = new TreeMap<String, Integer>();
-		String[] attributeValues = this.fullAttributeList.get(attribute);
+		String[] attributeValues = this.FULL_ATTRIBUTE_LIST.get(attribute);
 		
 	    // Initialize map with all possible values of attribute and set counters to 0.
 	    for (String attrValue : attributeValues) {
@@ -211,11 +215,11 @@ public class DecisionTree {
 	 * Function for calculating max benefit (attribute selection method) by Information Gain.
 	 * @return The max benefit AttributeName
 	 */
-	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList) {
+	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
 		String mostGainAttribute = "";
 		double highestGain = Double.MIN_VALUE;
-		for (String attribute : attributeList.keySet()) {
-			double gain = calculateGain(data, attributeList, attribute); 
+		for (String attribute : remainingAttributesList.keySet()) {
+			double gain = calculateGain(data, attribute); 
 			if (gain > highestGain) {
 				mostGainAttribute = attribute;
 				highestGain = gain;
@@ -229,23 +233,18 @@ public class DecisionTree {
 	 * Info(D) = -Emi=1pilog2(pi)					-> The expected information of the dataset (the average information)
 	 * InfoA(D) = Evj=1 (|Dj|/|D|) * Info(Dj)		-> The expected information of the attribute when you divide D in relation to A.
 	 */
-	private double calculateGain(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList, String attribute) {
-		// count the frequency of each value for the attribute
+	private double calculateGain(LinkedList<String[]> data, String attribute) {
+		// Count the frequency of each value for the attribute
 		TreeMap<String, Integer> attrValuesFrequencies = getAttributeValueFrequencies(data, attribute);
 		
-		// calculate the gain
+		// Calculate the gain
 		double sum = 0;
-		double nbrOfTuples = (double)data.size(); // Total number of data rows: |D| the number of tuples in D.
-		for (Entry<String, Integer> entry : attrValuesFrequencies.entrySet()) {
-			// TODO: Compare with github example
-			// calculateEntropyIfValue() == getEntropy()
-			sum += entry.getValue() / nbrOfTuples * getEntropy(data, attribute);
+		double totalNbrOfTuples = (double)data.size(); // Total number of data rows: |D| the number of tuples in D.
+		for (Entry<String, Integer> attrValueFrequency : attrValuesFrequencies.entrySet()) {
+			sum += attrValueFrequency.getValue() / totalNbrOfTuples * getEntropy(data, attribute);
 		}
-		
-		return globalEntropy - sum;
+		return GLOBAL_ENTROPY - sum;
 	}
-	
-
 	
 	/**
 	 * A helper method that subdivide (partition) datasets based on attributeValue. Test this good!
@@ -267,7 +266,6 @@ public class DecisionTree {
 	 * Go from name of an attribute to it's position in a data row.
 	 */
 	private int getAttributePosInRow(String attributeName) {
-		// TODO: This could probably use the fullAttributeList instead.
 		int attributePos = -1;
 		for (int i = 0; i < this.ATTRIBUTE_ORDER.length; i++) {
 			if (ATTRIBUTE_ORDER[i].equals(attributeName)) {
