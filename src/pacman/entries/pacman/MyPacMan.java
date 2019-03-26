@@ -25,12 +25,10 @@ public class MyPacMan extends Controller<MOVE>
 	
 	public MOVE getMove(Game game, long timeDue) 
 	{
-		//Place your game logic here to play the game as Ms Pac-Man
-		
-		//Current state
+		// Get current game state
 		DataTuple data = new DataTuple(game, game.getPacmanLastMoveMade());
 		
-		// Send attributes of Current state to DT and receive move
+		// Send attributes of current game state to decision tree and receive MOVE
 		return dt.predictMove(data);
 	}
 }

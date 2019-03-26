@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 
 import dataRecording.DataTuple;
@@ -56,46 +57,10 @@ public class DecisionTree {
 		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
 		this.FULL_ATTRIBUTE_LIST = new LinkedHashMap<String, String[]>(attributeList);
 		
-		// Gather, filter, discretize data -> list of String-arrays (filteredData)
+		// Convert trainingData to list of String-arrays (filteredData)
 		LinkedList<String[]> filteredData = new LinkedList<>();
 		for (DataTuple tupleRow : trainingData) {
-			String[] filteredRow = new String[15];
-			
-			filteredRow[0] = tupleRow.DirectionChosen.toString();
-			filteredRow[1] = tupleRow.discretizePosition(tupleRow.pacmanPosition).toString();
-			
-			filteredRow[2] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
-			filteredRow[3] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
-			filteredRow[4] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
-			filteredRow[5] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
-			
-			filteredRow[6] = Boolean.toString(tupleRow.isBlinkyEdible);
-			filteredRow[7] = Boolean.toString(tupleRow.isInkyEdible);
-			filteredRow[8] = Boolean.toString(tupleRow.isPinkyEdible);
-			filteredRow[9] = Boolean.toString(tupleRow.isSueEdible);
-			
-			filteredRow[10] = tupleRow.blinkyDir.toString();
-			filteredRow[11] = tupleRow.inkyDir.toString();
-			filteredRow[12] = tupleRow.pinkyDir.toString();
-			filteredRow[13] = tupleRow.sueDir.toString();
-			
-			// Preprocessor: Define "dangerLevel" based on proximity of closest non-edible ghost.
-			ArrayList<Integer> ghostDist = new ArrayList<>();
-			if (!tupleRow.isBlinkyEdible) ghostDist.add(tupleRow.blinkyDist);
-			if (!tupleRow.isInkyEdible) ghostDist.add(tupleRow.inkyDist);
-			if (!tupleRow.isPinkyEdible) ghostDist.add(tupleRow.pinkyDist);
-			if (!tupleRow.isSueEdible) ghostDist.add(tupleRow.sueDist);
-			int closestGhostDist = Integer.MAX_VALUE;
-			if (!ghostDist.isEmpty()) {
-				for (Integer dist : ghostDist) {
-					if (dist < closestGhostDist) closestGhostDist = dist;
-				}
-			} else {
-				closestGhostDist = -1;
-			}
-			filteredRow[14] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
-			
-			filteredData.add(filteredRow);
+			filteredData.add(getFilteredDataRow(tupleRow));
 		}
 		
 		// Calculate global entropty for targetClass "directionChosen"
@@ -104,6 +69,54 @@ public class DecisionTree {
 		
 		// Generate tree
 		this.root = generateTree(filteredData, attributeList);
+	}
+	
+	/*
+	 * Gather, filter, discretize data row
+	 */
+	private String[] getFilteredDataRow(DataTuple tupleRow) {
+		String[] filteredRow = new String[15];
+
+		filteredRow[0] = tupleRow.DirectionChosen.toString();
+		filteredRow[1] = tupleRow.discretizePosition(tupleRow.pacmanPosition).toString();
+
+		filteredRow[2] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
+		filteredRow[3] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
+		filteredRow[4] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
+		filteredRow[5] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
+
+		filteredRow[6] = Boolean.toString(tupleRow.isBlinkyEdible);
+		filteredRow[7] = Boolean.toString(tupleRow.isInkyEdible);
+		filteredRow[8] = Boolean.toString(tupleRow.isPinkyEdible);
+		filteredRow[9] = Boolean.toString(tupleRow.isSueEdible);
+
+		filteredRow[10] = tupleRow.blinkyDir.toString();
+		filteredRow[11] = tupleRow.inkyDir.toString();
+		filteredRow[12] = tupleRow.pinkyDir.toString();
+		filteredRow[13] = tupleRow.sueDir.toString();
+
+		// Preprocessor: Define "dangerLevel" based on proximity of closest non-edible ghost.
+		ArrayList<Integer> ghostDist = new ArrayList<>();
+		if (!tupleRow.isBlinkyEdible)
+			ghostDist.add(tupleRow.blinkyDist);
+		if (!tupleRow.isInkyEdible)
+			ghostDist.add(tupleRow.inkyDist);
+		if (!tupleRow.isPinkyEdible)
+			ghostDist.add(tupleRow.pinkyDist);
+		if (!tupleRow.isSueEdible)
+			ghostDist.add(tupleRow.sueDist);
+		int closestGhostDist = Integer.MAX_VALUE;
+		if (!ghostDist.isEmpty()) {
+			for (Integer dist : ghostDist) {
+				if (dist < closestGhostDist)
+					closestGhostDist = dist;
+			}
+		} else {
+			closestGhostDist = -1;
+		}
+		filteredRow[14] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
+		
+		return filteredRow;
 	}
 	
 	private double getEntropy(LinkedList<String[]> data, String attribute) {
@@ -196,7 +209,6 @@ public class DecisionTree {
 //				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
 //				b) If Dj is empty, add a child node to N labeled with the majority class in D.
 //				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
-			System.out.println("attributeNameA: " + attributeNameA);
 			String[] attributeValues = getPossibleValuesOfAttribute(attributeNameA);
 			for (String Aj : attributeValues) {
 				LinkedList<String[]> Dj = partitionData(data, attributeNameA, Aj);
@@ -211,7 +223,6 @@ public class DecisionTree {
 				}
 			}
 		}
-
 //		4. Return N.
 		return N;
 	}
@@ -288,30 +299,34 @@ public class DecisionTree {
 
 	// Print visual representation of the tree in console
 	public void printTree() {
-		// TODO: Implement this
-		System.out.println("A tree");
+		print(root, " ", "");
+	}
+	
+	private void print(Node node, String indent, String value) {
+		String newIndent = indent + "    ";
+		if (node.isLeaf == true) {
+			System.out.println(indent + value + " = "+ node.leafClass);
+		} else {
+			System.out.println(indent + node.attributeName + "->");
+			for (Entry<String, Node> s : node.branches.entrySet()) {
+				print(s.getValue(), newIndent, s.getKey());
+			}
+		}
 	}
 
-	public MOVE predictMove(DataTuple data) {
-		// TODO: Implement this
-		// Extract attribute values
-		// Traverse tree from this.root
-		return MOVE.NEUTRAL;
+	public MOVE predictMove(DataTuple tupleData) {
+		String[] dataRow = getFilteredDataRow(tupleData);
+		return traverse(root, dataRow);
 	}
 	
 	private MOVE traverse(Node currentNode, String[] attributeValues) {
-		// TODO: Implement this
 		if (currentNode.isLeaf == true) {
 			return currentNode.leafClass;
 		} else {
-//			String value = attributeValues[currentNode.attribute];
-//			for (int i=0; i< currentNode.attributeValues.length; i++){
-//				if(currentNode.attributeValues[i].equals(value)){
-//					return predict(currentNode.nodes[i], attributeValues);
-//				}
-//			}
+			int attrPos = getAttributePosInRow(currentNode.attributeName);
+			String attrValue = attributeValues[attrPos];
+			return traverse(currentNode.getChild(attrValue), attributeValues);
 		}
-		return null;
 	}
 	
 	private class Node {
@@ -323,7 +338,7 @@ public class DecisionTree {
 		public TreeMap<String, Node> branches = new TreeMap<>();	// <attrValue, childNode>
 		
 		public Node getChild(String attrValue) {
-			if (!this.isLeaf) throw new RuntimeException("getChild(): Node is a leaf!");
+			if (this.isLeaf) throw new RuntimeException("getChild(): Node has no children. Is's a leaf!");
 			Node childNode = branches.get(attrValue);
 			if (childNode == null) throw new RuntimeException("getChild(): there is no branch for attrValue: " + attrValue);
 			return childNode;
