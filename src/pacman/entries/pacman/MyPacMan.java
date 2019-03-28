@@ -30,7 +30,7 @@ public class MyPacMan extends Controller<MOVE>
 		
 		// Send attributes of current game state to decision tree and receive MOVE
 		MOVE move = dt.predictMove(data);
-//		System.out.println(move);
+		System.out.println(move);
 		
 		return move;
 	}

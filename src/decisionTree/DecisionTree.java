@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 
 import dataRecording.DataTuple;
@@ -20,6 +22,7 @@ public class DecisionTree {
 	private final String[] BOOLEAN_VALUES = {"true", "false"};
 	
 	private Node root;
+	private Random rand = new Random();
 	
 	public DecisionTree(DataTuple[] allData) {
 		// Partition dataset in:
@@ -173,34 +176,58 @@ public class DecisionTree {
 		return attrValueFrequencies;
 	}
 	
+	private String getMajorityAttributeValue(TreeMap<String, Integer> attrValueFrequencies) {
+		String majorityAttrValue = "noMajorityExists";
+		int maxFrequency = 0;
+		int frequency;
+		for (Entry<String, Integer> move : attrValueFrequencies.entrySet()) {
+			frequency = move.getValue();
+			if (frequency > maxFrequency) {
+				majorityAttrValue = move.getKey();
+				maxFrequency = frequency;
+			}
+		}
+		// Return a random attribute if no majority exists
+		if (majorityAttrValue.equals("noMajorityExists")) {
+			Set<String> keys = attrValueFrequencies.keySet();
+			int randomItemIndex = rand.nextInt(keys.size());
+			int i = 0;
+			for (String attrValue : attrValueFrequencies.keySet()) {
+				if (i == randomItemIndex) {
+					return attrValue;
+				} else {
+					i++;
+				}
+			}
+		}
+		return majorityAttrValue;
+	}
+	
 	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
 //		 1. Create node N.
 		Node N = new Node();
 		
-		// Count frequency of targetAttribute (classes) for all tuples. Will return <MOVE, counter>. targetClass == "directionChosen"
+		// Count frequency of target attribute for all tuples. Will return <String, frequency>. targetClass == "directionChosen"
 		TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, "directionChosen");
 		
 		// Is D is all the same class
 		boolean isAllSameClass = true, trigger = false;
 		String allSameClass = "";
-		for (String move : classCounter.keySet()) {
-			if (classCounter.get(move) > 0 && trigger == false) {
-				trigger = true;
-				allSameClass = move;
-			} else if (classCounter.get(move) > 0 && trigger == true) {
-				isAllSameClass = false;
-				break;
+		for (Entry<String, Integer> attrValueFreq : classCounter.entrySet()) {
+			if (attrValueFreq.getValue() > 0) {
+				if (trigger == false) {
+					trigger = true;
+					allSameClass = attrValueFreq.getKey();
+				} else {
+					isAllSameClass = false;
+					allSameClass = "";
+					break;
+				}
 			}
 		}
 		
 		// Get majority class in D
-		String majorityClass = "";
-		int maxValue = Integer.MIN_VALUE;
-		for (String move : classCounter.keySet()) {
-			if (classCounter.get(move).intValue() > maxValue) {
-				majorityClass = move;
-			}
-		}
+		String majorityClass = getMajorityAttributeValue(classCounter);
 		
 //		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
 		if (isAllSameClass == true) {
@@ -346,7 +373,7 @@ public class DecisionTree {
 	
 	private class Node {
 		public boolean isLeaf = false;
-		public MOVE leafClass;			// Class/Label/MOVE (Leaf nodes only)
+		public MOVE leafClass;										// Class/Label/MOVE (Leaf nodes only)
 		
 		// Only relevant if isLeaf == false
 		public String attributeName;								// pacmanPosition, isBlinkyEdible, inkyDist
