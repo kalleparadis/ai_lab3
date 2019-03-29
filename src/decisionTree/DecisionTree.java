@@ -21,6 +21,11 @@ public class DecisionTree {
 	private final String[] DISCRETE_TAG_VALUES = {"VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH", "NONE"};
 	private final String[] BOOLEAN_VALUES = {"true", "false"};
 	
+//	Only used by ExampleTest
+//	private final String[] AGE_VALUES = {"YOUTH", "MIDDLE_AGED", "SENIOR"};
+//	private final String[] INCOME_VALUES = {"LOW", "MEDIUM", "HIGH"};
+//	private final String[] CREDIT_RATING_VALUES = {"FAIR", "EXCELLENT"};
+	
 	private Node root;
 	private Random rand = new Random();
 	
@@ -28,6 +33,16 @@ public class DecisionTree {
 		
 		// Define the selected attributes
 		FULL_ATTRIBUTE_LIST = new LinkedHashMap<>();
+//		-------------------------------------------------------------------------------
+//		ExampleText
+//		FULL_ATTRIBUTE_LIST.put("age", AGE_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("income", INCOME_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("student", BOOLEAN_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("creditRating", CREDIT_RATING_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("buyComputer", BOOLEAN_VALUES);
+//		
+//		this.TARGET_ATTRIBUTE = "buyComputer";
+//		-------------------------------------------------------------------------------
 		FULL_ATTRIBUTE_LIST.put("directionChosen", MOVE_VALUES);			// MOVE
 		FULL_ATTRIBUTE_LIST.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
 		FULL_ATTRIBUTE_LIST.put("blinkyDist", DISCRETE_TAG_VALUES);
@@ -260,7 +275,7 @@ public class DecisionTree {
 	 */
 	private String S(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
 		String mostGainAttribute = "S() no-attribute chosen";
-		double highestGain = Double.MIN_VALUE;
+		double highestGain = Double.NEGATIVE_INFINITY;
 		for (String attribute : remainingAttributesList.keySet()) {
 			double gain = calculateGain(data, attribute);
 			if (gain > highestGain) {
@@ -321,7 +336,11 @@ public class DecisionTree {
 	}
 	
 	private String[] getPossibleValuesOfAttribute(String attribute) {
-		return this.FULL_ATTRIBUTE_LIST.get(attribute);
+		String[] possibleAttrValues = this.FULL_ATTRIBUTE_LIST.get(attribute);
+		if (possibleAttrValues == null) {
+			throw new RuntimeException("getPossibleValuesOfAttribute() null for attribute: " + attribute);
+		}
+		return possibleAttrValues;
 	}
 
 	// Print visual representation of the tree in console
@@ -357,7 +376,7 @@ public class DecisionTree {
 	
 	private class Node {
 		public boolean isLeaf = false;
-		public String leafClass;										// Class/Label/MOVE (Leaf nodes only)
+		public String leafClass;									// Class/Label/MOVE (Leaf nodes only)
 		
 		// Only relevant if isLeaf == false
 		public String attributeName;								// pacmanPosition, isBlinkyEdible, inkyDist
