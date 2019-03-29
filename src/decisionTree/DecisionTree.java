@@ -9,9 +9,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import dataRecording.DataTuple;
-import pacman.game.Constants.MOVE;
 
 public class DecisionTree {
+	private final String TARGET_ATTRIBUTE;
 	private final String[] ATTRIBUTE_ORDER;
 	private final LinkedHashMap<String, String[]> FULL_ATTRIBUTE_LIST;
 	private final double GLOBAL_ENTROPY;
@@ -24,20 +24,9 @@ public class DecisionTree {
 	private Node root;
 	private Random rand = new Random();
 	
-	public DecisionTree(DataTuple[] allData) {
-		// Partition dataset in:
-		// 80% training data (Used to build the decision tree)
-		// 20% test data (Used to test the final accuracy of the tree)
-		LinkedList<DataTuple> trainingData = new LinkedList<>();	// Data training set
-		LinkedList<DataTuple> testData = new LinkedList<>();		// Test dataset
-		for (int i = 0; i < allData.length; i++) {
-			if (i > (int)(allData.length * 0.2)) {
-				trainingData.add(allData[i]);
-			} else {
-				testData.add(allData[i]);
-			}
-		}
+	public DecisionTree(LinkedList<String[]> trainingData) {
 		
+		// Define the selected attributes
 		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<>();
 		attributeList.put("directionChosen", MOVE_VALUES);				// MOVE
 		attributeList.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
@@ -55,34 +44,28 @@ public class DecisionTree {
 		attributeList.put("sueDir", MOVE_VALUES);
 		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);			// DiscreteTag
 		
+		// Set the class that the tree is going to predict
+		this.TARGET_ATTRIBUTE = "directionChosen";
+		
 		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
 		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
 		this.FULL_ATTRIBUTE_LIST = new LinkedHashMap<String, String[]>(attributeList);
 		
-		// Convert trainingData to list of String-arrays (filteredData)
-		LinkedList<String[]> filteredData = new LinkedList<>();
-		for (DataTuple tupleRow : trainingData) {
-			filteredData.add(getFilteredDataRow(tupleRow));
-		}
-		
-		// Calculate global entropty for targetClass "directionChosen"
-		this.GLOBAL_ENTROPY = getEntropy(filteredData, "directionChosen");
+		// Calculate global entropty for target attribute
+		this.GLOBAL_ENTROPY = getEntropy(trainingData, TARGET_ATTRIBUTE);
 		System.out.println("GLOBAL_ENTROPY: " + GLOBAL_ENTROPY);
 		
 		// Generate tree
-		this.root = generateTree(filteredData, attributeList);
-		
-		// Calculate accuracy
-		System.out.println("Accuracy(training dataset): " + getAccuracy(trainingData));
-		System.out.println("Final accuracy(test dataset): " + getAccuracy(testData));
+		this.root = generateTree(trainingData, attributeList);
 	}
 	
-	private double getAccuracy(LinkedList<DataTuple> data) {
-		int totalNbrOfTuples = data.size();
+	public double getAccuracy(LinkedList<String[]> filteredData) {
+		int totalNbrOfTuples = filteredData.size();
 		int nbrTuplesClassifiedCorrectly = 0;
-		for (DataTuple row : data) {
-			MOVE predictedMove = predictMove(row);
-			if (predictedMove == row.DirectionChosen) {
+		for (String[] dataRow : filteredData) {
+			String correctMove = dataRow[getAttributePosInRow(TARGET_ATTRIBUTE)];
+			String predictedMove = predictMove(dataRow);
+			if (predictedMove.equals(correctMove)) {
 				nbrTuplesClassifiedCorrectly++;
 			}
 		}
@@ -92,7 +75,7 @@ public class DecisionTree {
 	/*
 	 * Gather, filter, discretize data row
 	 */
-	private String[] getFilteredDataRow(DataTuple tupleRow) {
+	public static String[] getFilteredDataRow(DataTuple tupleRow) {
 		String[] filteredRow = new String[15];
 
 		filteredRow[0] = tupleRow.DirectionChosen.toString();
@@ -207,8 +190,8 @@ public class DecisionTree {
 //		 1. Create node N.
 		Node N = new Node();
 		
-		// Count frequency of target attribute for all tuples. Will return <String, frequency>. targetClass == "directionChosen"
-		TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, "directionChosen");
+		// Count frequency of target attribute for all tuples. Will return <String, frequency>.
+		TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, TARGET_ATTRIBUTE);
 		
 		// Is D is all the same class
 		boolean isAllSameClass = true, trigger = false;
@@ -232,12 +215,12 @@ public class DecisionTree {
 //		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
 		if (isAllSameClass == true) {
 			N.isLeaf = true;
-			N.leafClass = MOVE.valueOf(allSameClass);
+			N.leafClass = allSameClass;
 			return N;
 		} else if (remainingAttributesList.isEmpty()) {
 //			3. Otherwise, if the attribute list is empty, return N as a leaf node labeled with the majority class in D.
 			N.isLeaf = true;
-			N.leafClass = MOVE.valueOf(majorityClass);
+			N.leafClass = majorityClass;
 			return N;
 		} else {
 //			4. Otherwise:
@@ -257,7 +240,7 @@ public class DecisionTree {
 				if (Dj.isEmpty()) {
 					Node childNode = new Node();
 					childNode.isLeaf = true;
-					childNode.leafClass = MOVE.valueOf(majorityClass); // Is it majorityClass of D (whole data) or Dj (partitioned data)?
+					childNode.leafClass = majorityClass; // Is it majorityClass of D (whole data) or Dj (partitioned data)?
 					N.branches.put(Aj, childNode);
 				} else {
 					Node childNode = generateTree(Dj, remainingAttributesList);
@@ -356,12 +339,11 @@ public class DecisionTree {
 		}
 	}
 
-	public MOVE predictMove(DataTuple tupleData) {
-		String[] dataRow = getFilteredDataRow(tupleData);
+	public String predictMove(String[] dataRow) {
 		return traverse(root, dataRow);
 	}
 	
-	private MOVE traverse(Node currentNode, String[] attributeValues) {
+	private String traverse(Node currentNode, String[] attributeValues) {
 		if (currentNode.isLeaf == true) {
 			return currentNode.leafClass;
 		} else {
@@ -373,7 +355,7 @@ public class DecisionTree {
 	
 	private class Node {
 		public boolean isLeaf = false;
-		public MOVE leafClass;										// Class/Label/MOVE (Leaf nodes only)
+		public String leafClass;										// Class/Label/MOVE (Leaf nodes only)
 		
 		// Only relevant if isLeaf == false
 		public String attributeName;								// pacmanPosition, isBlinkyEdible, inkyDist

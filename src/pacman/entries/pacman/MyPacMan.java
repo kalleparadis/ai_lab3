@@ -1,5 +1,7 @@
 package pacman.entries.pacman;
 
+import java.util.LinkedList;
+
 import dataRecording.DataSaverLoader;
 import dataRecording.DataTuple;
 import decisionTree.DecisionTree;
@@ -14,23 +16,47 @@ import pacman.game.Game;
  */
 public class MyPacMan extends Controller<MOVE>
 {
-	// private MOVE myMove=MOVE.NEUTRAL;
 	private DecisionTree dt;
+	private LinkedList<String[]> trainingData = new LinkedList<>();	// Data training set
+	private LinkedList<String[]> testData = new LinkedList<>();		// Test dataset
 	
 	public MyPacMan() {
 		super();
-		dt = new DecisionTree(DataSaverLoader.LoadPacManData());
+		
+		// Full dataset
+		DataTuple[] allData = DataSaverLoader.LoadPacManData();
+		
+		// Partition dataset in:
+		// 80% training data (Used to build the decision tree)
+		// 20% test data (Used to test the final accuracy of the tree)
+		for (int i = 0; i < allData.length; i++) {
+			if (i > (int)(allData.length * 0.2)) {
+				trainingData.add(DecisionTree.getFilteredDataRow(allData[i]));
+			} else {
+				testData.add(DecisionTree.getFilteredDataRow(allData[i]));
+			}
+		}
+		
+		dt = new DecisionTree(trainingData); // Build the tree
+		
+		// Calculate accuracy
+		System.out.println("Accuracy(training dataset): " + dt.getAccuracy(trainingData));
+		System.out.println("Final accuracy(test dataset): " + dt.getAccuracy(testData));
+		
 		dt.printTree();
 	}
 	
 	public MOVE getMove(Game game, long timeDue) 
 	{
 		// Get current game state
-		DataTuple data = new DataTuple(game, game.getPacmanLastMoveMade());
+		DataTuple gameStateData = new DataTuple(game, game.getPacmanLastMoveMade());
 		
 		// Send attributes of current game state to decision tree and receive MOVE
-		MOVE move = dt.predictMove(data);
-		System.out.println(move);
+		String[] dataRow = DecisionTree.getFilteredDataRow(gameStateData);
+		MOVE move = MOVE.valueOf(dt.predictMove(dataRow));
+		
+		System.out.println(gameStateData.getSaveString() + " ---> " + move);
+//		System.out.println(move);
 		
 		return move;
 	}
