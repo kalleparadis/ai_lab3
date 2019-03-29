@@ -27,38 +27,106 @@ public class DecisionTree {
 	public DecisionTree(LinkedList<String[]> trainingData) {
 		
 		// Define the selected attributes
-		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<>();
-		attributeList.put("directionChosen", MOVE_VALUES);				// MOVE
-		attributeList.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
-		attributeList.put("blinkyDist", DISCRETE_TAG_VALUES);
-		attributeList.put("inkyDist", DISCRETE_TAG_VALUES);
-		attributeList.put("pinkyDist", DISCRETE_TAG_VALUES);
-		attributeList.put("sueDist", DISCRETE_TAG_VALUES);
-		attributeList.put("isBlinkyEdible", BOOLEAN_VALUES);			// Boolean
-		attributeList.put("isInkyEdible", BOOLEAN_VALUES);
-		attributeList.put("isPinkyEdible", BOOLEAN_VALUES);
-		attributeList.put("isSueEdible", BOOLEAN_VALUES);
-		attributeList.put("blinkyDir", MOVE_VALUES);					// MOVE
-		attributeList.put("inkyDir", MOVE_VALUES);
-		attributeList.put("pinkyDir", MOVE_VALUES);
-		attributeList.put("sueDir", MOVE_VALUES);
-		attributeList.put("dangerLevel", DISCRETE_TAG_VALUES);			// DiscreteTag
+		FULL_ATTRIBUTE_LIST = new LinkedHashMap<>();
+		FULL_ATTRIBUTE_LIST.put("directionChosen", MOVE_VALUES);			// MOVE
+		FULL_ATTRIBUTE_LIST.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
+		FULL_ATTRIBUTE_LIST.put("blinkyDist", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("inkyDist", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("pinkyDist", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("sueDist", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("isBlinkyEdible", BOOLEAN_VALUES);			// Boolean
+		FULL_ATTRIBUTE_LIST.put("isInkyEdible", BOOLEAN_VALUES);
+		FULL_ATTRIBUTE_LIST.put("isPinkyEdible", BOOLEAN_VALUES);
+		FULL_ATTRIBUTE_LIST.put("isSueEdible", BOOLEAN_VALUES);
+		FULL_ATTRIBUTE_LIST.put("blinkyDir", MOVE_VALUES);					// MOVE
+		FULL_ATTRIBUTE_LIST.put("inkyDir", MOVE_VALUES);
+		FULL_ATTRIBUTE_LIST.put("pinkyDir", MOVE_VALUES);
+		FULL_ATTRIBUTE_LIST.put("sueDir", MOVE_VALUES);
+		FULL_ATTRIBUTE_LIST.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
+		
+		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
+		this.ATTRIBUTE_ORDER = FULL_ATTRIBUTE_LIST.keySet().toArray(new String[0]);
 		
 		// Set the class that the tree is going to predict
 		this.TARGET_ATTRIBUTE = "directionChosen";
-		
-		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
-		this.ATTRIBUTE_ORDER = attributeList.keySet().toArray(new String[0]);
-		this.FULL_ATTRIBUTE_LIST = new LinkedHashMap<String, String[]>(attributeList);
 		
 		// Calculate global entropty for target attribute
 		this.GLOBAL_ENTROPY = getEntropy(trainingData, TARGET_ATTRIBUTE);
 		System.out.println("GLOBAL_ENTROPY: " + GLOBAL_ENTROPY);
 		
+		// Make a copy of the attribute list that will be manipulated when building the tree
+		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<String, String[]>(this.FULL_ATTRIBUTE_LIST);
+		
 		// Generate tree
 		this.root = generateTree(trainingData, attributeList);
 	}
 	
+	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
+	//		 1. Create node N.
+			Node N = new Node();
+			
+			// Count frequency of target attribute for all tuples. Will return <String, frequency>.
+			TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, TARGET_ATTRIBUTE);
+			
+			// Is D is all the same class
+			boolean isAllSameClass = true, trigger = false;
+			String allSameClass = "";
+			for (Entry<String, Integer> attrValueFreq : classCounter.entrySet()) {
+				if (attrValueFreq.getValue() > 0) {
+					if (trigger == false) {
+						trigger = true;
+						allSameClass = attrValueFreq.getKey();
+					} else {
+						isAllSameClass = false;
+						allSameClass = "";
+						break;
+					}
+				}
+			}
+			
+			// Get majority class in D
+			String majorityClass = getMajorityAttributeValue(classCounter);
+			
+	//		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
+			if (isAllSameClass == true) {
+				N.isLeaf = true;
+				N.leafClass = allSameClass;
+				return N;
+			} else if (remainingAttributesList.isEmpty()) {
+	//			3. Otherwise, if the attribute list is empty, return N as a leaf node labeled with the majority class in D.
+				N.isLeaf = true;
+				N.leafClass = majorityClass;
+				return N;
+			} else {
+	//			4. Otherwise:
+	//			1. Call the attribute selection method on D and the attribute list, in order to choose the current attribute A: S(D, attribute list) -> A.
+				String attributeNameA = S(data, remainingAttributesList);
+	//			2. Label N as A and remove A from the attribute list.
+				N.attributeName = attributeNameA;
+				N.isLeaf = false;
+				remainingAttributesList.remove(attributeNameA);
+	//			3. For each value Aj in attribute A:
+	//				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
+	//				b) If Dj is empty, add a child node to N labeled with the majority class in D.
+	//				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
+				String[] attributeValues = getPossibleValuesOfAttribute(attributeNameA);
+				for (String Aj : attributeValues) {
+					LinkedList<String[]> Dj = partitionData(data, attributeNameA, Aj);
+					if (Dj.isEmpty()) {
+						Node childNode = new Node();
+						childNode.isLeaf = true;
+						childNode.leafClass = majorityClass; // Is it majorityClass of D (whole data) or Dj (partitioned data)?
+						N.branches.put(Aj, childNode);
+					} else {
+						Node childNode = generateTree(Dj, remainingAttributesList);
+						N.branches.put(Aj, childNode);
+					}
+				}
+			}
+	//		4. Return N.
+			return N;
+		}
+
 	public double getAccuracy(LinkedList<String[]> filteredData) {
 		int totalNbrOfTuples = filteredData.size();
 		int nbrTuplesClassifiedCorrectly = 0;
@@ -184,72 +252,6 @@ public class DecisionTree {
 			}
 		}
 		return majorityAttrValue;
-	}
-	
-	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
-//		 1. Create node N.
-		Node N = new Node();
-		
-		// Count frequency of target attribute for all tuples. Will return <String, frequency>.
-		TreeMap<String, Integer> classCounter = getAttributeValueFrequencies(data, TARGET_ATTRIBUTE);
-		
-		// Is D is all the same class
-		boolean isAllSameClass = true, trigger = false;
-		String allSameClass = "";
-		for (Entry<String, Integer> attrValueFreq : classCounter.entrySet()) {
-			if (attrValueFreq.getValue() > 0) {
-				if (trigger == false) {
-					trigger = true;
-					allSameClass = attrValueFreq.getKey();
-				} else {
-					isAllSameClass = false;
-					allSameClass = "";
-					break;
-				}
-			}
-		}
-		
-		// Get majority class in D
-		String majorityClass = getMajorityAttributeValue(classCounter);
-		
-//		 2. If every tuple in D has the same class C, return N as a leaf node labeled as C.
-		if (isAllSameClass == true) {
-			N.isLeaf = true;
-			N.leafClass = allSameClass;
-			return N;
-		} else if (remainingAttributesList.isEmpty()) {
-//			3. Otherwise, if the attribute list is empty, return N as a leaf node labeled with the majority class in D.
-			N.isLeaf = true;
-			N.leafClass = majorityClass;
-			return N;
-		} else {
-//			4. Otherwise:
-//			1. Call the attribute selection method on D and the attribute list, in order to choose the current attribute A: S(D, attribute list) -> A.
-			String attributeNameA = S(data, remainingAttributesList);
-//			2. Label N as A and remove A from the attribute list.
-			N.attributeName = attributeNameA;
-			N.isLeaf = false;
-			remainingAttributesList.remove(attributeNameA);
-//			3. For each value Aj in attribute A:
-//				a) Separate all tuples in D so that attribute A takes the value Aj, creating the subset Dj.
-//				b) If Dj is empty, add a child node to N labeled with the majority class in D.
-//				c) Otherwise, add the resulting node from calling Generate_Tree(Dj, attribute) as a child node to N.
-			String[] attributeValues = getPossibleValuesOfAttribute(attributeNameA);
-			for (String Aj : attributeValues) {
-				LinkedList<String[]> Dj = partitionData(data, attributeNameA, Aj);
-				if (Dj.isEmpty()) {
-					Node childNode = new Node();
-					childNode.isLeaf = true;
-					childNode.leafClass = majorityClass; // Is it majorityClass of D (whole data) or Dj (partitioned data)?
-					N.branches.put(Aj, childNode);
-				} else {
-					Node childNode = generateTree(Dj, remainingAttributesList);
-					N.branches.put(Aj, childNode);
-				}
-			}
-		}
-//		4. Return N.
-		return N;
 	}
 	
 	/**
