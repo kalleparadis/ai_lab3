@@ -19,6 +19,11 @@ public class DataSaverLoader {
 	
 	public static DataTuple[] LoadPacManData()
 	{
+		return LoadPacManData(FileName);
+	}
+	
+	public static DataTuple[] LoadPacManData(String FileName)
+	{
 		String data = IO.loadFile(FileName);
 		String[] dataLine = data.split("\n");
 		DataTuple[] dataTuples = new DataTuple[dataLine.length];

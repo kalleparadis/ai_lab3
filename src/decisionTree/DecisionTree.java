@@ -45,6 +45,11 @@ public class DecisionTree {
 //		-------------------------------------------------------------------------------
 		FULL_ATTRIBUTE_LIST.put("directionChosen", MOVE_VALUES);			// MOVE
 		FULL_ATTRIBUTE_LIST.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
+		FULL_ATTRIBUTE_LIST.put("currentScore", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("totalGameTime", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("currentLevelTime", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("numOfPillsLeft", DISCRETE_TAG_VALUES);
+		FULL_ATTRIBUTE_LIST.put("numOfPowerPillsLeft", DISCRETE_TAG_VALUES);
 		FULL_ATTRIBUTE_LIST.put("blinkyDist", DISCRETE_TAG_VALUES);
 		FULL_ATTRIBUTE_LIST.put("inkyDist", DISCRETE_TAG_VALUES);
 		FULL_ATTRIBUTE_LIST.put("pinkyDist", DISCRETE_TAG_VALUES);
@@ -159,25 +164,30 @@ public class DecisionTree {
 	 * Gather, filter, discretize data row
 	 */
 	public static String[] getFilteredDataRow(DataTuple tupleRow) {
-		String[] filteredRow = new String[15];
+		String[] filteredRow = new String[20];
 
 		filteredRow[0] = tupleRow.DirectionChosen.toString();
 		filteredRow[1] = tupleRow.discretizePosition(tupleRow.pacmanPosition).toString();
+		filteredRow[2] = tupleRow.discretizeCurrentScore(tupleRow.currentScore).toString();
+		filteredRow[3] = tupleRow.discretizeTotalGameTime(tupleRow.totalGameTime).toString();
+		filteredRow[4] = tupleRow.discretizeCurrentLevelTime(tupleRow.currentLevelTime).toString();
+		filteredRow[5] = tupleRow.discretizeNumberOfPills(tupleRow.numOfPillsLeft).toString();
+		filteredRow[6] = tupleRow.discretizeNumberOfPowerPills(tupleRow.numOfPowerPillsLeft).toString();
 
-		filteredRow[2] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
-		filteredRow[3] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
-		filteredRow[4] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
-		filteredRow[5] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
+		filteredRow[7] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
+		filteredRow[8] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
+		filteredRow[9] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
+		filteredRow[10] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
 
-		filteredRow[6] = Boolean.toString(tupleRow.isBlinkyEdible);
-		filteredRow[7] = Boolean.toString(tupleRow.isInkyEdible);
-		filteredRow[8] = Boolean.toString(tupleRow.isPinkyEdible);
-		filteredRow[9] = Boolean.toString(tupleRow.isSueEdible);
+		filteredRow[11] = Boolean.toString(tupleRow.isBlinkyEdible);
+		filteredRow[12] = Boolean.toString(tupleRow.isInkyEdible);
+		filteredRow[13] = Boolean.toString(tupleRow.isPinkyEdible);
+		filteredRow[14] = Boolean.toString(tupleRow.isSueEdible);
 
-		filteredRow[10] = tupleRow.blinkyDir.toString();
-		filteredRow[11] = tupleRow.inkyDir.toString();
-		filteredRow[12] = tupleRow.pinkyDir.toString();
-		filteredRow[13] = tupleRow.sueDir.toString();
+		filteredRow[15] = tupleRow.blinkyDir.toString();
+		filteredRow[16] = tupleRow.inkyDir.toString();
+		filteredRow[17] = tupleRow.pinkyDir.toString();
+		filteredRow[18] = tupleRow.sueDir.toString();
 
 		// Preprocessor: Define "dangerLevel" based on proximity of closest non-edible ghost.
 		ArrayList<Integer> ghostDist = new ArrayList<>();
@@ -198,13 +208,13 @@ public class DecisionTree {
 		} else {
 			closestGhostDist = -1;
 		}
-		filteredRow[14] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
+		filteredRow[19] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
 		
 		return filteredRow;
 	}
 	
 	private double getEntropy(LinkedList<String[]> data, String attribute) {
-		double entropy = 0d;
+		double entropySum = 0d;
 		TreeMap<String, Integer> attrValueFrequencies = getAttributeValueFrequencies(data, attribute);
 		double nbrOfTuples = (double)data.size(); 							// Total number of data rows
 		String[] attributeValues = getPossibleValuesOfAttribute(attribute);
@@ -212,10 +222,10 @@ public class DecisionTree {
 			int attrValueFreq = attrValueFrequencies.get(attributeValue);
 			if (attrValueFreq > 0) {
 				double frequency = (double)attrValueFreq / (double)nbrOfTuples;
-				entropy -= frequency * Math.log(frequency) / Math.log(2);
+				entropySum -= frequency * Math.log(frequency) / Math.log(2);
 			}
 		}
-		return entropy;
+		return entropySum;
 	}
 	
 	/**
@@ -364,13 +374,13 @@ public class DecisionTree {
 		return traverse(root, dataRow);
 	}
 	
-	private String traverse(Node currentNode, String[] attributeValues) {
+	private String traverse(Node currentNode, String[] dataRow) {
 		if (currentNode.isLeaf == true) {
 			return currentNode.leafClass;
 		} else {
 			int attrPos = getAttributePosInRow(currentNode.attributeName);
-			String attrValue = attributeValues[attrPos];
-			return traverse(currentNode.getChild(attrValue), attributeValues);
+			String attrValue = dataRow[attrPos];
+			return traverse(currentNode.getChild(attrValue), dataRow);
 		}
 	}
 	

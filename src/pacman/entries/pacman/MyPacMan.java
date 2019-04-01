@@ -24,18 +24,23 @@ public class MyPacMan extends Controller<MOVE>
 		super();
 		
 		// Full dataset
-		DataTuple[] allData = DataSaverLoader.LoadPacManData();
+		DataTuple[] allTuples = DataSaverLoader.LoadPacManData();
 		
 		// Partition dataset in:
 		// 80% training data (Used to build the decision tree)
 		// 20% test data (Used to test the final accuracy of the tree)
-		for (int i = 0; i < allData.length; i++) {
-			if (i > (int)(allData.length * 0.2)) {
-				trainingData.add(DecisionTree.getFilteredDataRow(allData[i]));
+		for (int i = 0; i < allTuples.length; i++) {
+			if (i > (int)(allTuples.length * 0.2)) {
+				trainingData.add(DecisionTree.getFilteredDataRow(allTuples[i]));
 			} else {
-				testData.add(DecisionTree.getFilteredDataRow(allData[i]));
+				testData.add(DecisionTree.getFilteredDataRow(allTuples[i]));
 			}
 		}
+		
+//		DataTuple[] testTuples = DataSaverLoader.LoadPacManData("testData.txt");
+//		for (int i = 0; i < testTuples.length; i++) {
+//			testData.add(DecisionTree.getFilteredDataRow(testTuples[i]));
+//		}
 		
 		dt = new DecisionTree(trainingData); // Build the tree
 		
@@ -53,9 +58,10 @@ public class MyPacMan extends Controller<MOVE>
 		
 		// Send attributes of current game state to decision tree and receive MOVE
 		String[] dataRow = DecisionTree.getFilteredDataRow(gameStateData);
-		MOVE move = MOVE.valueOf(dt.predictMove(dataRow));
+		String predictedMove = dt.predictMove(dataRow);
+		MOVE move = MOVE.valueOf(predictedMove);
 		
-		System.out.println(gameStateData.getSaveString() + " ---> " + move);
+		System.out.println(gameStateData.getSaveString() + " ---> " + predictedMove);
 //		System.out.println(move);
 		
 		return move;
