@@ -43,7 +43,7 @@ public class MyPacMan extends Controller<MOVE>
 		System.out.println("Accuracy(training dataset): " + dt.getAccuracy(trainingData));
 		System.out.println("Final accuracy(test dataset): " + dt.getAccuracy(testData));
 		
-//		dt.printTree();
+		dt.printTree();
 	}
 	
 	public MOVE getMove(Game game, long timeDue) 
