@@ -35,11 +35,11 @@ public class StarterPacMan extends Controller<MOVE>
 		GHOST minGhost=null;		
 		
 		for(GHOST ghost : GHOST.values())
-			if(game.getGhostEdibleTime(ghost)>0)
+			if(game.getGhostEdibleTime(ghost)>1)
 			{
 				int distance=game.getShortestPathDistance(current,game.getGhostCurrentNodeIndex(ghost));
 				
-				if(distance<minDistance)
+				if(distance<minDistance && distance < 5)
 				{
 					minDistance=distance;
 					minGhost=ghost;

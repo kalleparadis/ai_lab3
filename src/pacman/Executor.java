@@ -52,7 +52,7 @@ public class Executor
 		//run multiple games in batch mode - good for testing.
 		int numTrials=10;
 //		exec.runExperiment(new RandomPacMan(),new RandomGhosts(),numTrials);
-		 
+//		exec.runExperiment(new MyPacMan(),new StarterGhosts(),20);
 		
 		/*
 		//run a game in synchronous mode: game waits until controllers respond.

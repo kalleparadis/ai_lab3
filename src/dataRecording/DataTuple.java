@@ -59,6 +59,10 @@ public class DataTuple {
 	public int numberOfTotalPillsInLevel;
 	public int numberOfTotalPowerPillsInLevel;
 	private int maximumDistance = 150;
+	
+	public MOVE nearestPillDir;
+	public MOVE nearestPowerPillDir;
+	public MOVE moveAwayFromClosestGhostDir;
 
 	public DataTuple(Game game, MOVE move) {
 		if (move == MOVE.NEUTRAL) {
@@ -105,6 +109,47 @@ public class DataTuple {
 		this.numberOfNodesInLevel = game.getNumberOfNodes();
 		this.numberOfTotalPillsInLevel = game.getNumberOfPills();
 		this.numberOfTotalPowerPillsInLevel = game.getNumberOfPowerPills();
+		
+		int currentPacmanNodeIndex=game.getPacmanCurrentNodeIndex();
+		int[] activePills=game.getActivePillsIndices(); //get all active pills
+		int[] activePowerPills=game.getActivePowerPillsIndices(); //get all active power pills
+		//create a target array that includes all ACTIVE pills and power pills
+		int[] targetNodeIndices=new int[activePills.length+activePowerPills.length];
+		
+		for(int i=0;i<activePills.length;i++)
+			targetNodeIndices[i]=activePills[i];
+		
+		for(int i=0;i<activePowerPills.length;i++)
+			targetNodeIndices[activePills.length+i]=activePowerPills[i];	
+		
+		// set nearestPillDir to the next direction once the closest target has been identified
+		nearestPillDir = game.getNextMoveTowardsTarget(currentPacmanNodeIndex,game.getClosestNodeIndexFromNodeIndex(currentPacmanNodeIndex,targetNodeIndices,DM.PATH),DM.PATH);
+		
+		if (activePowerPills != null && activePowerPills.length > 0) {
+			nearestPowerPillDir = game.getNextMoveTowardsTarget(currentPacmanNodeIndex,game.getClosestNodeIndexFromNodeIndex(currentPacmanNodeIndex,activePowerPills,DM.PATH),DM.PATH);
+		} else {
+			nearestPowerPillDir = MOVE.NEUTRAL;
+		}
+		
+		final int MIN_DISTANCE = 20;	//if a ghost is this close, run away
+		// if any non-edible ghost is too close (less than MIN_DISTANCE), run away
+		GHOST closestGhost = null;
+		int closestGhostDist = Integer.MAX_VALUE;
+		for (GHOST ghost : GHOST.values()) {
+			if (game.getGhostEdibleTime(ghost) == 0 && game.getGhostLairTime(ghost) == 0) {
+				int ghostDist = game.getShortestPathDistance(currentPacmanNodeIndex, game.getGhostCurrentNodeIndex(ghost));
+				if (ghostDist < MIN_DISTANCE && ghostDist < closestGhostDist) {
+					closestGhost = ghost;
+					closestGhostDist = ghostDist;
+				}
+			}
+		}
+		if (closestGhost != null) {
+			moveAwayFromClosestGhostDir = game.getNextMoveAwayFromTarget(game.getPacmanCurrentNodeIndex(), game.getGhostCurrentNodeIndex(closestGhost), DM.PATH);
+		} else {
+			moveAwayFromClosestGhostDir = MOVE.NEUTRAL;
+		}
+		
 	}
 
 	public DataTuple(String data) {
@@ -136,6 +181,9 @@ public class DataTuple {
 		this.numberOfNodesInLevel = Integer.parseInt(dataSplit[22]);
 		this.numberOfTotalPillsInLevel = Integer.parseInt(dataSplit[23]);
 		this.numberOfTotalPowerPillsInLevel = Integer.parseInt(dataSplit[24]);
+		this.nearestPillDir = MOVE.valueOf(dataSplit[25]);
+		this.nearestPowerPillDir = MOVE.valueOf(dataSplit[26]);
+		this.moveAwayFromClosestGhostDir = MOVE.valueOf(dataSplit[27]);
 	}
 
 	public String getSaveString() {
@@ -166,6 +214,9 @@ public class DataTuple {
 		stringbuilder.append(this.numberOfNodesInLevel + ";");
 		stringbuilder.append(this.numberOfTotalPillsInLevel + ";");
 		stringbuilder.append(this.numberOfTotalPowerPillsInLevel + ";");
+		stringbuilder.append(this.nearestPillDir + ";");
+		stringbuilder.append(this.nearestPowerPillDir + ";");
+		stringbuilder.append(this.moveAwayFromClosestGhostDir + ";");
 
 		return stringbuilder.toString();
 	}

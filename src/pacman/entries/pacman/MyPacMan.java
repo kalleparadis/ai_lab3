@@ -37,18 +37,13 @@ public class MyPacMan extends Controller<MOVE>
 			}
 		}
 		
-//		DataTuple[] testTuples = DataSaverLoader.LoadPacManData("testData.txt");
-//		for (int i = 0; i < testTuples.length; i++) {
-//			testData.add(DecisionTree.getFilteredDataRow(testTuples[i]));
-//		}
-		
 		dt = new DecisionTree(trainingData); // Build the tree
 		
 		// Calculate accuracy
 		System.out.println("Accuracy(training dataset): " + dt.getAccuracy(trainingData));
 		System.out.println("Final accuracy(test dataset): " + dt.getAccuracy(testData));
 		
-		dt.printTree();
+//		dt.printTree();
 	}
 	
 	public MOVE getMove(Game game, long timeDue) 
@@ -61,7 +56,7 @@ public class MyPacMan extends Controller<MOVE>
 		String predictedMove = dt.predictMove(dataRow);
 		MOVE move = MOVE.valueOf(predictedMove);
 		
-		System.out.println(gameStateData.getSaveString() + " ---> " + predictedMove);
+//		System.out.println(gameStateData.getSaveString() + " ---> " + predictedMove);
 //		System.out.println(move);
 		
 		return move;

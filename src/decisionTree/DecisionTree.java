@@ -22,9 +22,9 @@ public class DecisionTree {
 	private final String[] BOOLEAN_VALUES = {"true", "false"};
 	
 //	Only used by ExampleTest
-//	private final String[] AGE_VALUES = {"YOUTH", "MIDDLE_AGED", "SENIOR"};
-//	private final String[] INCOME_VALUES = {"LOW", "MEDIUM", "HIGH"};
-//	private final String[] CREDIT_RATING_VALUES = {"FAIR", "EXCELLENT"};
+	private final String[] AGE_VALUES = {"YOUTH", "MIDDLE_AGED", "SENIOR"};
+	private final String[] INCOME_VALUES = {"LOW", "MEDIUM", "HIGH"};
+	private final String[] CREDIT_RATING_VALUES = {"FAIR", "EXCELLENT"};
 	
 	private Node root;
 	private Random rand = new Random();
@@ -44,25 +44,29 @@ public class DecisionTree {
 //		this.TARGET_ATTRIBUTE = "buyComputer";
 //		-------------------------------------------------------------------------------
 		FULL_ATTRIBUTE_LIST.put("directionChosen", MOVE_VALUES);			// MOVE
-		FULL_ATTRIBUTE_LIST.put("pacmanPosition", DISCRETE_TAG_VALUES);		// DiscreteTag
-		FULL_ATTRIBUTE_LIST.put("currentScore", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("totalGameTime", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("currentLevelTime", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("numOfPillsLeft", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("numOfPowerPillsLeft", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("blinkyDist", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("inkyDist", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("pinkyDist", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("sueDist", DISCRETE_TAG_VALUES);
-		FULL_ATTRIBUTE_LIST.put("isBlinkyEdible", BOOLEAN_VALUES);			// Boolean
-		FULL_ATTRIBUTE_LIST.put("isInkyEdible", BOOLEAN_VALUES);
-		FULL_ATTRIBUTE_LIST.put("isPinkyEdible", BOOLEAN_VALUES);
-		FULL_ATTRIBUTE_LIST.put("isSueEdible", BOOLEAN_VALUES);
-		FULL_ATTRIBUTE_LIST.put("blinkyDir", MOVE_VALUES);					// MOVE
-		FULL_ATTRIBUTE_LIST.put("inkyDir", MOVE_VALUES);
-		FULL_ATTRIBUTE_LIST.put("pinkyDir", MOVE_VALUES);
-		FULL_ATTRIBUTE_LIST.put("sueDir", MOVE_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("currentLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
+//		FULL_ATTRIBUTE_LIST.put("pacmanPosition", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("currentScore", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("totalGameTime", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("currentLevelTime", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("numOfPillsLeft", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("numOfPowerPillsLeft", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("blinkyDist", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("inkyDist", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("pinkyDist", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("sueDist", DISCRETE_TAG_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("isBlinkyEdible", BOOLEAN_VALUES);			// Boolean
+//		FULL_ATTRIBUTE_LIST.put("isInkyEdible", BOOLEAN_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("isPinkyEdible", BOOLEAN_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("isSueEdible", BOOLEAN_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("blinkyDir", MOVE_VALUES);					// MOVE
+//		FULL_ATTRIBUTE_LIST.put("inkyDir", MOVE_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("pinkyDir", MOVE_VALUES);
+//		FULL_ATTRIBUTE_LIST.put("sueDir", MOVE_VALUES);
 		FULL_ATTRIBUTE_LIST.put("dangerLevel", DISCRETE_TAG_VALUES);		// DiscreteTag
+		FULL_ATTRIBUTE_LIST.put("nearestPillDir", MOVE_VALUES);				// MOVE
+		FULL_ATTRIBUTE_LIST.put("nearestPowerPillDir", MOVE_VALUES);
+		FULL_ATTRIBUTE_LIST.put("moveAwayFromClosestGhostDir", MOVE_VALUES);
 		
 		// Save the attribute order for later use, and a full copy of the attribute names and possible values.
 		this.ATTRIBUTE_ORDER = FULL_ATTRIBUTE_LIST.keySet().toArray(new String[0]);
@@ -76,12 +80,16 @@ public class DecisionTree {
 		
 		// Make a copy of the attribute list that will be manipulated when building the tree
 		LinkedHashMap<String, String[]> attributeList = new LinkedHashMap<String, String[]>(this.FULL_ATTRIBUTE_LIST);
+		attributeList.remove(this.TARGET_ATTRIBUTE);
 		
 		// Generate tree
 		this.root = generateTree(trainingData, attributeList);
 	}
 	
-	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> remainingAttributesList) {
+	public Node generateTree(LinkedList<String[]> data, LinkedHashMap<String, String[]> attributeList) {
+	// Make a copy of the attribute list for this branch
+		LinkedHashMap<String, String[]> remainingAttributesList = new LinkedHashMap<String, String[]>(attributeList);
+		
 	//		 1. Create node N.
 			Node N = new Node();
 			
@@ -164,30 +172,31 @@ public class DecisionTree {
 	 * Gather, filter, discretize data row
 	 */
 	public static String[] getFilteredDataRow(DataTuple tupleRow) {
-		String[] filteredRow = new String[20];
+		String[] filteredRow = new String[5];
 
 		filteredRow[0] = tupleRow.DirectionChosen.toString();
-		filteredRow[1] = tupleRow.discretizePosition(tupleRow.pacmanPosition).toString();
-		filteredRow[2] = tupleRow.discretizeCurrentScore(tupleRow.currentScore).toString();
-		filteredRow[3] = tupleRow.discretizeTotalGameTime(tupleRow.totalGameTime).toString();
-		filteredRow[4] = tupleRow.discretizeCurrentLevelTime(tupleRow.currentLevelTime).toString();
-		filteredRow[5] = tupleRow.discretizeNumberOfPills(tupleRow.numOfPillsLeft).toString();
-		filteredRow[6] = tupleRow.discretizeNumberOfPowerPills(tupleRow.numOfPowerPillsLeft).toString();
+//		filteredRow[1] = DataTuple.DiscreteTag.DiscretizeDouble(tupleRow.normalizeLevel(tupleRow.currentLevel)).toString();
+//		filteredRow[2] = tupleRow.discretizePosition(tupleRow.pacmanPosition).toString();
+//		filteredRow[1] = tupleRow.discretizeCurrentScore(tupleRow.currentScore).toString();
+//		filteredRow[2] = tupleRow.discretizeTotalGameTime(tupleRow.totalGameTime).toString();
+//		filteredRow[3] = tupleRow.discretizeCurrentLevelTime(tupleRow.currentLevelTime).toString();
+//		filteredRow[4] = tupleRow.discretizeNumberOfPills(tupleRow.numOfPillsLeft).toString();
+//		filteredRow[5] = tupleRow.discretizeNumberOfPowerPills(tupleRow.numOfPowerPillsLeft).toString();
 
-		filteredRow[7] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
-		filteredRow[8] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
-		filteredRow[9] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
-		filteredRow[10] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
+//		filteredRow[8] = tupleRow.discretizeDistance(tupleRow.blinkyDist).toString();
+//		filteredRow[9] = tupleRow.discretizeDistance(tupleRow.inkyDist).toString();
+//		filteredRow[10] = tupleRow.discretizeDistance(tupleRow.pinkyDist).toString();
+//		filteredRow[11] = tupleRow.discretizeDistance(tupleRow.sueDist).toString();
 
-		filteredRow[11] = Boolean.toString(tupleRow.isBlinkyEdible);
-		filteredRow[12] = Boolean.toString(tupleRow.isInkyEdible);
-		filteredRow[13] = Boolean.toString(tupleRow.isPinkyEdible);
-		filteredRow[14] = Boolean.toString(tupleRow.isSueEdible);
+//		filteredRow[12] = Boolean.toString(tupleRow.isBlinkyEdible);
+//		filteredRow[13] = Boolean.toString(tupleRow.isInkyEdible);
+//		filteredRow[14] = Boolean.toString(tupleRow.isPinkyEdible);
+//		filteredRow[15] = Boolean.toString(tupleRow.isSueEdible);
 
-		filteredRow[15] = tupleRow.blinkyDir.toString();
-		filteredRow[16] = tupleRow.inkyDir.toString();
-		filteredRow[17] = tupleRow.pinkyDir.toString();
-		filteredRow[18] = tupleRow.sueDir.toString();
+//		filteredRow[15] = tupleRow.blinkyDir.toString();
+//		filteredRow[16] = tupleRow.inkyDir.toString();
+//		filteredRow[17] = tupleRow.pinkyDir.toString();
+//		filteredRow[18] = tupleRow.sueDir.toString();
 
 		// Preprocessor: Define "dangerLevel" based on proximity of closest non-edible ghost.
 		ArrayList<Integer> ghostDist = new ArrayList<>();
@@ -208,7 +217,10 @@ public class DecisionTree {
 		} else {
 			closestGhostDist = -1;
 		}
-		filteredRow[19] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
+		filteredRow[1] = tupleRow.discretizeDistance(closestGhostDist).toString(); // "dangerLevel"
+		filteredRow[2] = tupleRow.nearestPillDir.toString();
+		filteredRow[3] = tupleRow.nearestPowerPillDir.toString();
+		filteredRow[4] = tupleRow.moveAwayFromClosestGhostDir.toString();
 		
 		return filteredRow;
 	}
